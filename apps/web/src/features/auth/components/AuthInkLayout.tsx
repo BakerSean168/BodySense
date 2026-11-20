@@ -35,7 +35,7 @@ export function AuthInkLayout({
   return (
     <div
       data-testid={testId}
-      className="relative min-h-screen overflow-hidden bg-[#E6EEE5] text-[#182A21]"
+      className="relative min-h-screen overflow-hidden bg-[#E6EEE5] text-[var(--ui-ink)]"
     >
       <div className="relative mx-auto flex min-h-screen max-w-[1440px] flex-col lg:min-h-[max(100vh,760px)] lg:flex-row lg:items-center lg:justify-between lg:gap-[35px] lg:pr-[88px] lg:pl-[clamp(40px,12.08vw,174px)]">
         {/* Brand: single mark, top-left */}
@@ -71,7 +71,7 @@ export function AuthInkLayout({
 
         {/* Rice-paper card (desktop) / sheet (mobile) */}
         <main
-          className={`relative z-10 mt-2 flex min-h-[460px] w-full flex-1 flex-col rounded-t-[24px] border border-b-0 border-[#E4E0D3] bg-[#FBFAF5] px-6 pt-8 ${compactMobile ? "pb-10" : "pb-[51px]"} shadow-[0_-6px_30px_rgba(29,42,34,0.08)] lg:mt-0 lg:min-h-[500px] lg:w-[452px] lg:flex-none lg:rounded-[14px] lg:border-b lg:px-10 lg:pt-12 lg:pb-[43px] lg:shadow-[0_18px_48px_rgba(29,42,34,0.08)]`}
+          className={`relative z-10 mt-2 flex min-h-[460px] w-full flex-1 flex-col rounded-t-[24px] border border-b-0 border-[var(--ui-paper-line)] bg-[var(--ui-paper)] px-6 pt-8 ${compactMobile ? "pb-10" : "pb-[51px]"} shadow-[0_-6px_30px_rgba(29,42,34,0.08)] lg:mt-0 lg:min-h-[500px] lg:w-[452px] lg:flex-none lg:rounded-[14px] lg:border-b lg:px-10 lg:pt-12 lg:pb-[43px] lg:shadow-[0_18px_48px_rgba(29,42,34,0.08)]`}
         >
           <div
             aria-hidden="true"
@@ -93,7 +93,7 @@ export function AuthInkLayout({
           </h2>
           <div className="relative mt-[39px] lg:mt-[50px]">{children}</div>
           <p
-            className={`relative mt-auto ${compactMobile ? "pt-7" : "pt-10"} lg:pt-10 text-center text-sm leading-[1.2] text-[#718075]`}
+            className={`relative mt-auto ${compactMobile ? "pt-7" : "pt-10"} lg:pt-10 text-center text-sm leading-[1.2] text-[var(--ui-muted)]`}
           >
             {footer}
           </p>

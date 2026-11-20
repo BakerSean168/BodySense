@@ -59,17 +59,17 @@ export function AssetErasure({
 
   return (
     <section
-      className="space-y-3 border-t border-gray-200 p-4"
+      className="space-y-3 border-t border-border p-4"
       aria-label="彻底删除这个文件"
       data-testid="asset-erasure"
       data-phase={view?.phase ?? (working ? "in_progress" : "confirm")}
     >
       {!receipt ? (
         <>
-          <p className="flex items-center gap-2 text-sm font-medium text-gray-900">
+          <p className="flex items-center gap-2 text-sm font-medium text-foreground">
             <Trash2 size={15} /> 彻底删除这个文件？
           </p>
-          <p className="text-xs text-gray-600">
+          <p className="text-xs text-muted-foreground">
             将删除原始文件、识别与分析结果、报告指标复核、相关评估报告副本和对话运行缓存，并逐项验证。仍被诊断条目或训练计划使用的内容需要你先处理。只想删除原始文件、保留已整理的记录时，请改用“移除原件”。
           </p>
         </>
@@ -77,7 +77,7 @@ export function AssetErasure({
         <>
           <p
             role="status"
-            className={`flex items-center gap-2 text-sm ${erased ? "text-green-700" : "text-gray-900"}`}
+            className={`flex items-center gap-2 text-sm ${erased ? "text-success-foreground" : "text-foreground"}`}
           >
             {working || view.phase === "in_progress" ? (
               <LoaderCircle size={15} className="animate-spin" />
@@ -88,11 +88,11 @@ export function AssetErasure({
             )}
             <strong>{view.title}</strong>
           </p>
-          <p className="text-xs text-gray-600">{view.summary}</p>
+          <p className="text-xs text-muted-foreground">{view.summary}</p>
           {view.outstanding.length > 0 ? (
             <ul className="space-y-1" aria-label="尚未完成的项目">
               {view.outstanding.map((line) => (
-                <li key={line.target} className="text-xs text-gray-700">
+                <li key={line.target} className="text-xs text-foreground/80">
                   <span className="font-medium">{line.label}</span>
                   {" · "}
                   {line.reason}
@@ -103,7 +103,10 @@ export function AssetErasure({
           {view.reviews.length > 0 ? (
             <ul className="space-y-1" aria-label="需要你处理的内容">
               {view.reviews.map((label, index) => (
-                <li key={`${label}:${index}`} className="text-xs text-gray-700">
+                <li
+                  key={`${label}:${index}`}
+                  className="text-xs text-foreground/80"
+                >
                   {label}
                 </li>
               ))}
@@ -115,7 +118,7 @@ export function AssetErasure({
         {!receipt ? (
           <button
             type="button"
-            className="inline-flex items-center gap-1 rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-md bg-destructive px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
             disabled={working}
             onClick={() => void request()}
           >
@@ -128,7 +131,7 @@ export function AssetErasure({
         {receipt && !erased ? (
           <button
             type="button"
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 disabled:opacity-50"
+            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground/80 disabled:opacity-50"
             disabled={working}
             onClick={() => void request()}
           >
@@ -137,7 +140,7 @@ export function AssetErasure({
         ) : null}
         <button
           type="button"
-          className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 disabled:opacity-50"
+          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground/80 disabled:opacity-50"
           disabled={working}
           onClick={() => onClose(erased)}
         >
@@ -145,7 +148,7 @@ export function AssetErasure({
         </button>
       </div>
       {error ? (
-        <p role="alert" className="text-xs text-red-600">
+        <p role="alert" className="text-xs text-destructive">
           {error}
         </p>
       ) : null}

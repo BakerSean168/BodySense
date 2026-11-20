@@ -185,18 +185,18 @@ export function UploadStep() {
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         aria-describedby="onboarding-upload-hint"
-        className={`flex h-[168px] w-full flex-col items-center justify-center gap-2 rounded-[14px] border-2 border-dashed px-6 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2C694F] lg:h-[200px] ${
+        className={`flex h-[168px] w-full flex-col items-center justify-center gap-2 rounded-[14px] border-2 border-dashed px-6 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ui-primary)] lg:h-[200px] ${
           dragging
-            ? "border-[#2C694F] bg-[#E8F0EA]"
-            : "border-[#E5E7EB] bg-[#F6F8F7] hover:border-[#C9D3CC]"
+            ? "border-[var(--ui-primary)] bg-[var(--ui-highlight)]"
+            : "border-border bg-muted/60 hover:border-ring/40"
         }`}
       >
-        <span className="text-[15px] text-[#6B7280]">
+        <span className="text-[15px] text-muted-foreground">
           {uploading ? "上传中…" : "点击上传或拖拽文件到这里"}
         </span>
         <span
           id="onboarding-upload-hint"
-          className="text-[13px] text-[#9CA3AF]"
+          className="text-[13px] text-muted-foreground/70"
         >
           支持体检报告 PDF、体态照片（选填）
         </span>
@@ -206,11 +206,11 @@ export function UploadStep() {
         <div
           role="group"
           aria-label={`这张图片是？${pendingImage.name}`}
-          className="rounded-[14px] bg-[#F7F7F7] p-4"
+          className="rounded-[14px] bg-muted/60 p-4"
         >
-          <p className="truncate text-sm text-[#1A1A1A]">
+          <p className="truncate text-sm text-foreground">
             这张图片是？
-            <span className="text-[#6B7280]">{pendingImage.name}</span>
+            <span className="text-muted-foreground">{pendingImage.name}</span>
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {KIND_CHOICES.map((choice) => {
@@ -222,7 +222,7 @@ export function UploadStep() {
                   type="button"
                   disabled={taken || uploading}
                   onClick={() => void send(pendingImage, choice.value)}
-                  className="h-10 rounded-[10px] border-2 border-transparent bg-white text-sm text-[#1A1A1A] hover:border-[#2C694F] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2C694F] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="h-10 rounded-[10px] border-2 border-transparent bg-card text-sm text-foreground hover:border-[var(--ui-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ui-primary)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {choice.label}
                 </button>
@@ -232,7 +232,7 @@ export function UploadStep() {
           <button
             type="button"
             onClick={() => setPendingImage(null)}
-            className="mt-2 text-[13px] text-[#6B7280] hover:text-[#1A1A1A]"
+            className="mt-2 text-[13px] text-muted-foreground hover:text-foreground"
           >
             取消
           </button>
@@ -240,7 +240,7 @@ export function UploadStep() {
       )}
 
       {error && (
-        <p role="alert" className="text-sm text-[#B42318]">
+        <p role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}
@@ -250,21 +250,21 @@ export function UploadStep() {
           {uploads.map((file) => (
             <li
               key={file.id}
-              className="flex items-center justify-between gap-3 rounded-[10px] bg-[#F7F7F7] px-4 py-3 text-sm"
+              className="flex items-center justify-between gap-3 rounded-[10px] bg-muted/60 px-4 py-3 text-sm"
             >
               <span className="min-w-0 truncate">
-                <span className="text-[#6B7280]">
+                <span className="text-muted-foreground">
                   {FILE_TYPE_LABELS[file.file_type] ?? "资料"} ·{" "}
                 </span>
                 {file.original_name}
                 {file.source_availability === "source_unavailable" ? (
-                  <span className="block text-[13px] text-[#9CA3AF]">
+                  <span className="block text-[13px] text-muted-foreground/70">
                     原件已移除
                   </span>
                 ) : null}
               </span>
               <span className="flex shrink-0 items-center gap-2">
-                <span className="text-[13px] text-[#2C694F]">
+                <span className="text-[13px] text-[var(--ui-primary)]">
                   {statusText(file)}
                 </span>
                 {file.source_availability === "source_unavailable" ? null : (
@@ -275,7 +275,7 @@ export function UploadStep() {
                       setPendingRemoval(file);
                     }}
                     aria-label={`删除 ${file.original_name}`}
-                    className="flex h-7 w-7 items-center justify-center rounded-full text-[#9CA3AF] hover:bg-white hover:text-[#B42318] focus-visible:outline-2 focus-visible:outline-[#2C694F]"
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground/70 hover:bg-card hover:text-destructive focus-visible:outline-2 focus-visible:outline-[var(--ui-primary)]"
                   >
                     <svg
                       aria-hidden="true"
@@ -306,7 +306,7 @@ export function UploadStep() {
           <DialogTitle>移除这个文件？</DialogTitle>
           <DialogDescription>{REMOVAL_NOTE}</DialogDescription>
           {removalError ? (
-            <p role="alert" className="text-sm text-[#B42318]">
+            <p role="alert" className="text-sm text-destructive">
               {removalError}
             </p>
           ) : null}
@@ -315,7 +315,7 @@ export function UploadStep() {
               type="button"
               disabled={removingId !== null}
               onClick={() => setPendingRemoval(null)}
-              className="rounded-md px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+              className="rounded-md px-3 py-1.5 text-sm text-foreground/80 hover:bg-muted disabled:opacity-50"
             >
               取消
             </button>
@@ -323,7 +323,7 @@ export function UploadStep() {
               type="button"
               disabled={removingId !== null}
               onClick={() => pendingRemoval && void remove(pendingRemoval.id)}
-              className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+              className="rounded-md bg-destructive px-3 py-1.5 text-sm text-white hover:bg-destructive/90 disabled:opacity-50"
             >
               {removingId !== null ? "正在移除" : "移除原件"}
             </button>

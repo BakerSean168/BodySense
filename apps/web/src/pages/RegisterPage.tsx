@@ -13,7 +13,7 @@ export function RegisterPage() {
           已有账号？
           <Link
             to="/login"
-            className="auth-ink-link font-bold text-[#2C694F] hover:underline hover:underline-offset-4"
+            className="auth-ink-link font-bold text-[var(--ui-primary)] hover:underline hover:underline-offset-4"
           >
             登录
           </Link>

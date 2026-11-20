@@ -51,8 +51,8 @@ export function InteractionMetricsPanel({
       : "暂无等待样本";
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[#E4EBE6] bg-[#F7FAF8] px-3 py-2 text-[11px] text-[#5D6B63]">
-      <span className="font-semibold text-[#2F3A34]">追问效果</span>
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/50 px-3 py-2 text-[11px] text-muted-foreground">
+      <span className="font-semibold text-foreground">追问效果</span>
       <span>回答率 {(metrics.answer_rate * 100).toFixed(0)}%</span>
       <span>过期率 {(metrics.expire_rate * 100).toFixed(0)}%</span>
       <span>

@@ -31,9 +31,9 @@ export function UploadList() {
 
   if (uploads.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-muted-foreground">
         <svg
-          className="mx-auto h-12 w-12 text-gray-400 mb-3"
+          className="mx-auto h-12 w-12 text-muted-foreground/70 mb-3"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -78,14 +78,14 @@ export function UploadList() {
           <DialogFooter>
             <button
               type="button"
-              className="rounded-md px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+              className="rounded-md px-3 py-1.5 text-sm text-foreground/80 hover:bg-muted"
               onClick={() => setConfirmingId(null)}
             >
               取消
             </button>
             <button
               type="button"
-              className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700"
+              className="rounded-md bg-destructive px-3 py-1.5 text-sm text-white hover:bg-destructive/90"
               onClick={() =>
                 confirmingId && void handleRemoveSource(confirmingId)
               }
@@ -140,17 +140,17 @@ function UploadItem({
 
   return (
     <div
-      className="border border-gray-200 rounded-lg overflow-hidden"
+      className="border border-border rounded-lg overflow-hidden"
       data-testid="upload-item"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-gray-50">
+      <div className="flex items-center justify-between p-4 bg-muted/50">
         <div className="flex items-center gap-3">
           {/* Thumbnail or icon */}
           {isImage ? (
-            <div className="w-12 h-12 rounded bg-gray-200 flex items-center justify-center">
+            <div className="w-12 h-12 rounded bg-secondary flex items-center justify-center">
               <svg
-                className="w-6 h-6 text-gray-400"
+                className="w-6 h-6 text-muted-foreground/70"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -164,9 +164,9 @@ function UploadItem({
               </svg>
             </div>
           ) : (
-            <div className="w-12 h-12 rounded bg-gray-200 flex items-center justify-center">
+            <div className="w-12 h-12 rounded bg-secondary flex items-center justify-center">
               <svg
-                className="w-6 h-6 text-gray-400"
+                className="w-6 h-6 text-muted-foreground/70"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -182,24 +182,24 @@ function UploadItem({
           )}
 
           <div>
-            <p className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
+            <p className="text-sm font-medium text-foreground truncate max-w-[200px]">
               {upload.original_name}
             </p>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 {FILE_TYPE_LABELS[upload.file_type]}
               </span>
-              <span className="text-xs text-gray-400">•</span>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground/70">•</span>
+              <span className="text-xs text-muted-foreground">
                 {formatFileSize(upload.file_size)}
               </span>
-              <span className="text-xs text-gray-400">•</span>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground/70">•</span>
+              <span className="text-xs text-muted-foreground">
                 {formatDate(upload.created_at)}
               </span>
             </div>
             {sourceRemoved ? (
-              <p className="mt-1 text-xs text-amber-700">
+              <p className="mt-1 text-xs text-warning-foreground">
                 原件已移除 · 整理出的记录保留
               </p>
             ) : null}
@@ -213,7 +213,7 @@ function UploadItem({
           <DropdownMenu>
             <IconTip label="更多">
               <DropdownMenuTrigger
-                className="grid size-8 place-items-center rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+                className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-50"
                 aria-label={`管理“${upload.original_name}”`}
                 disabled={isDeleting || erasure !== null}
               >
@@ -243,7 +243,7 @@ function UploadItem({
 
       {/* OCR Result */}
       {isReport && upload.ocr_status === "completed" && upload.ocr_result && (
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-border">
           <button
             type="button"
             onClick={() => setShowOCR(!showOCR)}
@@ -273,7 +273,7 @@ function UploadItem({
 
       {/* OCR processing indicator */}
       {isReport && upload.ocr_status === "processing" && (
-        <div className="p-4 border-t border-gray-200 bg-blue-50">
+        <div className="p-4 border-t border-border bg-blue-50">
           <div className="flex items-center gap-2 text-sm text-blue-700">
             <svg
               className="w-4 h-4 animate-spin"
@@ -301,8 +301,10 @@ function UploadItem({
 
       {/* OCR failed indicator */}
       {isReport && upload.ocr_status === "failed" && (
-        <div className="p-4 border-t border-gray-200 bg-red-50">
-          <p className="text-sm text-red-700">识别失败，请重新上传或联系支持</p>
+        <div className="p-4 border-t border-border bg-destructive/10">
+          <p className="text-sm text-destructive">
+            识别失败，请重新上传或联系支持
+          </p>
         </div>
       )}
     </div>
@@ -311,10 +313,10 @@ function UploadItem({
 
 function OCRStatusBadge({ status }: { status: UserUpload["ocr_status"] }) {
   const styles = {
-    pending: "bg-gray-100 text-gray-600",
+    pending: "bg-muted text-muted-foreground",
     processing: "bg-blue-100 text-blue-700",
-    completed: "bg-green-100 text-green-700",
-    failed: "bg-red-100 text-red-700",
+    completed: "bg-success text-success-foreground",
+    failed: "bg-destructive/15 text-destructive",
   };
 
   return (
