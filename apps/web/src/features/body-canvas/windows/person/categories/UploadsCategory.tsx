@@ -63,6 +63,8 @@ export function UploadsCategory({
     }
   };
   const picker = (
+    /* U5 豁免：窗口「+」打开的系统文件对话框只能用原生 <input type="file">；
+       控件 sr-only，不参与组件库表单样式。 */
     <input
       ref={inputRef}
       type="file"
