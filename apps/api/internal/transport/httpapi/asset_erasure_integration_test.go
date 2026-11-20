@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bodysense/api/internal/config"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
@@ -29,7 +30,7 @@ func assetErasureIntegrationRouter(t *testing.T, db *gorm.DB, actingUser uuid.UU
 		t.Fatal(err)
 	}
 	assets := repository.NewUserAssetRepository(db)
-	uploads := service.NewUploadService(assets, repository.NewDocumentExtractionRunRepository(db), repository.NewPostureAnalysisRunRepository(db), nil, nil, registry)
+	uploads := service.NewUploadService(assets, repository.NewDocumentExtractionRunRepository(db), repository.NewPostureAnalysisRunRepository(db), nil, nil, registry, config.Load(os.Getenv).Upload)
 	erasure := service.NewAssetErasureService(repository.NewAssetErasureRepository(db), uploads)
 	router := gin.New()
 	RegisterRoutes(router, StrictHandler(NewPublicServer().WithUploads(uploads, nil).WithAssetErasure(erasure)), RouteSecurity{

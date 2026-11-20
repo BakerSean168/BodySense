@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bodysense/api/internal/auth"
+	"github.com/bodysense/api/internal/config"
 	consultationruntime "github.com/bodysense/api/internal/consultation"
 	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/episodicrecall"
@@ -37,6 +38,10 @@ func main() {
 	// Structured process logger must be installed before service initialization so startup
 	// failures and standard-library log.Printf calls share the same JSON log stream.
 	observability.ConfigureLogger()
+
+	// The composition root is the only place the API reads the process
+	// environment; every layer below receives the resolved values.
+	apiConfig := config.Load(os.Getenv)
 
 	// Reject invalid privacy-gate configuration before DB/Redis connections,
 	// migrations, background workers or external services are initialized.
@@ -115,12 +120,12 @@ func main() {
 	profileService := service.NewProfileService(profileRepo)
 	jobRepo := repository.NewJobRepository(database.DB)
 	jobRuntime := service.NewJobRuntime(jobRepo)
-	aiClient := service.NewAIClient()
-	agentDeploymentPolicy, err := service.NewAgentDeploymentPolicy()
+	aiClient := service.NewAIClient(apiConfig.AI)
+	agentDeploymentPolicy, err := service.NewAgentDeploymentPolicy(apiConfig.Deployment)
 	if err != nil {
 		log.Fatalf("failed to configure Agent deployment policy: %v", err)
 	}
-	healthDocumentDeploymentPolicy, err := service.NewHealthDocumentDeploymentPolicy()
+	healthDocumentDeploymentPolicy, err := service.NewHealthDocumentDeploymentPolicy(apiConfig.HealthDocument)
 	if err != nil {
 		log.Fatalf("failed to configure health-document deployment policy: %v", err)
 	}
@@ -175,7 +180,7 @@ func main() {
 	documentIndicatorReviewRepo := repository.NewDocumentIndicatorReviewRepository(database.DB)
 	outputReviewRepo := repository.NewAIOutputReviewRepository(database.DB)
 	outputReviewService := service.NewOutputReviewService(outputReviewRepo)
-	uploadService := service.NewUploadService(userAssetRepo, documentExtractionRunRepo, postureAnalysisRunRepo, jobRuntime, outputReviewService, uploadStorage).
+	uploadService := service.NewUploadService(userAssetRepo, documentExtractionRunRepo, postureAnalysisRunRepo, jobRuntime, outputReviewService, uploadStorage, apiConfig.Upload).
 		WithDeployment(agentDeploymentPolicy).
 		WithHealthDocumentDeployment(healthDocumentDeploymentPolicy)
 	uploadService.StartUploadWorker(context.Background(), 10*time.Second, 10*time.Minute)
@@ -241,6 +246,7 @@ func main() {
 		runtimeEventService,
 		uploadService,
 		agentDeploymentPolicy,
+		apiConfig.Consultation,
 		bodyStateService,
 	)
 	consultationRuntime.AttachBodyFactService(bodyFactService)
@@ -279,10 +285,10 @@ func main() {
 		knowledgeSourceRegistry,
 		jobRuntime,
 		agentDeploymentPolicy,
-		os.Getenv("AI_SERVICE_URL"),
+		apiConfig.AI.ServiceURL,
 	)
 	knowledgeIngestionService.StartWorker(context.Background(), 10*time.Second, 15*time.Minute)
-	knowledgeQueryService := service.NewKnowledgeQueryService(os.Getenv("AI_SERVICE_URL"))
+	knowledgeQueryService := service.NewKnowledgeQueryService(apiConfig.AI.ServiceURL)
 
 	// Continuous health workspace is the single capability/read model for the product loop.
 	healthWorkspaceService := service.NewHealthWorkspaceService(

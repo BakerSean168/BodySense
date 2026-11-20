@@ -10,13 +10,12 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
-	"os"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/bodysense/api/internal/config"
 	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/episodicrecall"
 	"github.com/bodysense/api/internal/model"
@@ -26,34 +25,20 @@ import (
 	"gorm.io/datatypes"
 )
 
-const (
-	maxSSEEvents = 10000
+const maxSSEEvents = 10000
 
-	consultationExecutionTimeoutEnv     = "CONSULTATION_EXECUTION_TIMEOUT_SECONDS"
-	defaultConsultationExecutionTimeout = 5 * time.Minute
-)
-
-// consultationExecutionTimeout resolves the total time budget for one
-// consultation execution. durableExecutionContext applies it to every serial
-// model call (diagnosis, structuring, knowledge tool rounds, final
-// composition) plus all persistence, so a slow provider doing multi-turn work
-// can legitimately exceed the previous fixed five minutes. The environment
-// variable lets a deployment raise the budget without a code change; unset,
-// non-numeric, zero, or negative values keep the safe default.
-func consultationExecutionTimeout() time.Duration {
-	raw := strings.TrimSpace(os.Getenv(consultationExecutionTimeoutEnv))
-	if raw == "" {
-		return defaultConsultationExecutionTimeout
+// durableExecutionContext is the total time budget for one consultation
+// execution. It applies to every serial model call (diagnosis, structuring,
+// knowledge tool rounds, final composition) plus all persistence, so a slow
+// provider doing multi-turn work can legitimately exceed the previous fixed
+// five minutes. The budget arrives from the composition root (see
+// config.Consultation); a zero-value Runtime keeps the safe default.
+func (r *Runtime) durableExecutionContext(parent context.Context) (context.Context, context.CancelFunc) {
+	budget := r.executionTimeout
+	if budget <= 0 {
+		budget = config.DefaultConsultationExecutionTimeout
 	}
-	seconds, err := strconv.Atoi(raw)
-	if err != nil || seconds <= 0 {
-		return defaultConsultationExecutionTimeout
-	}
-	return time.Duration(seconds) * time.Second
-}
-
-func durableExecutionContext(parent context.Context) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.WithoutCancel(parent), consultationExecutionTimeout())
+	return context.WithTimeout(context.WithoutCancel(parent), budget)
 }
 
 type ConsultationErrorCode string
@@ -114,6 +99,7 @@ type Runtime struct {
 	rolloutService              *service.ConsultationRolloutService
 	knowledgeObservationService runtimeKnowledgeObservationService
 	chatRetention               runtimeChatRetention
+	executionTimeout            time.Duration
 
 	cancelMu   sync.Mutex
 	runCancels map[uuid.UUID]context.CancelFunc
@@ -133,6 +119,7 @@ func NewRuntime(
 	runtimeEventService *service.RuntimeEventService,
 	uploadService *service.UploadService,
 	deployment *service.AgentDeploymentPolicy,
+	cfg config.Consultation,
 	bodyStateServices ...runtimeBodyStateService,
 ) *Runtime {
 	var bodyStateService runtimeBodyStateService
@@ -154,6 +141,7 @@ func NewRuntime(
 		uploadService:           uploadService,
 		deployment:              deployment,
 		bodyStateService:        bodyStateService,
+		executionTimeout:        cfg.ExecutionTimeout,
 		streamRuntime:           stream.NewRuntime(),
 		runCancels:              make(map[uuid.UUID]context.CancelFunc),
 	}
@@ -333,7 +321,7 @@ func (r *Runtime) StartRun(
 	}
 	conversationID := session.ConversationID
 	isNewConversation := conversationCreated
-	executionCtx, cancelExecution := durableExecutionContext(ctx)
+	executionCtx, cancelExecution := r.durableExecutionContext(ctx)
 	defer cancelExecution()
 	unregisterCancellation := r.registerRunCancellation(run.ID, cancelExecution)
 	defer unregisterCancellation()
@@ -736,7 +724,7 @@ func (r *Runtime) ResumeInteraction(
 	)
 	r.refreshThreadProjection(ctx, conversationID, uid)
 
-	executionCtx, cancelExecution := durableExecutionContext(ctx)
+	executionCtx, cancelExecution := r.durableExecutionContext(ctx)
 	defer cancelExecution()
 	unregisterCancellation := r.registerRunCancellation(run.ID, cancelExecution)
 	defer unregisterCancellation()

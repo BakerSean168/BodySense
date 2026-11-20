@@ -13,10 +13,10 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
+	"github.com/bodysense/api/internal/config"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/uploadstorage"
 	"github.com/google/uuid"
@@ -102,7 +102,8 @@ type UploadService struct {
 	storage                  *uploadstorage.Registry
 }
 
-// NewUploadService creates a new UploadService.
+// NewUploadService creates a new UploadService. The AI and health-document
+// endpoints arrive resolved from the composition root; see config.Upload.
 func NewUploadService(
 	assets userAssetRepository,
 	extractionRuns documentExtractionRunRepository,
@@ -110,23 +111,16 @@ func NewUploadService(
 	jobRuntime *JobRuntime,
 	outputReviewService *OutputReviewService,
 	storage *uploadstorage.Registry,
+	cfg config.Upload,
 ) *UploadService {
-	aiServiceURL := os.Getenv("AI_SERVICE_URL")
-	if aiServiceURL == "" {
-		aiServiceURL = "http://localhost:8100"
-	}
-	healthDocumentServiceURL := os.Getenv("HEALTH_DOCUMENT_SERVICE_URL")
-	if healthDocumentServiceURL == "" {
-		healthDocumentServiceURL = aiServiceURL
-	}
 	return &UploadService{
 		assets:               assets,
 		extractionRuns:       extractionRuns,
 		postureRuns:          postureRuns,
 		jobRuntime:           jobRuntime,
 		outputReviewService:  outputReviewService,
-		aiClient:             newAIClient(aiServiceURL, uploadJobTimeout),
-		healthDocumentClient: newAIClient(healthDocumentServiceURL, uploadJobTimeout),
+		aiClient:             newAIClient(cfg.AIServiceURL, uploadJobTimeout),
+		healthDocumentClient: newAIClient(cfg.HealthDocumentServiceURL, uploadJobTimeout),
 		storage:              storage,
 	}
 }

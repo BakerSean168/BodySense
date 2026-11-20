@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bodysense/api/internal/config"
 	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/episodicrecall"
 	"github.com/bodysense/api/internal/model"
@@ -109,7 +110,7 @@ func captureStartTurnPayload(
 	t.Cleanup(server.Close)
 	t.Setenv("AI_SERVICE_URL", server.URL)
 
-	deployment, err := service.NewAgentDeploymentPolicy()
+	deployment, err := service.NewAgentDeploymentPolicy(config.Load(os.Getenv).Deployment)
 	if err != nil {
 		t.Fatalf("build deployment policy: %v", err)
 	}
@@ -119,7 +120,7 @@ func captureStartTurnPayload(
 		service.NewProfileService(repository.NewProfileRepository(db)),
 		nil,
 		nil,
-		service.NewAIClient(),
+		service.NewAIClient(config.Load(os.Getenv).AI),
 		nil,
 		nil,
 		nil,
@@ -127,6 +128,7 @@ func captureStartTurnPayload(
 		nil,
 		nil,
 		deployment,
+		config.Load(os.Getenv).Consultation,
 	)
 	runtime.AttachEpisodicRecall(recaller)
 

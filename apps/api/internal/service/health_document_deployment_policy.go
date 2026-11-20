@@ -2,8 +2,8 @@ package service
 
 import (
 	"fmt"
-	"os"
-	"strings"
+
+	"github.com/bodysense/api/internal/config"
 )
 
 const (
@@ -159,8 +159,11 @@ type HealthDocumentDeploymentPolicy struct {
 	rollbackConfigurationID      string
 }
 
-func NewHealthDocumentDeploymentPolicy() (*HealthDocumentDeploymentPolicy, error) {
-	stage := strings.TrimSpace(os.Getenv("HEALTH_DOCUMENT_STAGE"))
+// NewHealthDocumentDeploymentPolicy resolves the rollout pointers read by the
+// composition root (see config.HealthDocument). Stage defaults and the
+// fail-closed registration checks stay here.
+func NewHealthDocumentDeploymentPolicy(cfg config.HealthDocument) (*HealthDocumentDeploymentPolicy, error) {
+	stage := cfg.Stage
 	if stage == "" {
 		stage = HealthDocumentStageChampion
 	}
@@ -170,7 +173,7 @@ func NewHealthDocumentDeploymentPolicy() (*HealthDocumentDeploymentPolicy, error
 		return nil, fmt.Errorf("invalid HEALTH_DOCUMENT_STAGE %q", stage)
 	}
 
-	champion := strings.TrimSpace(os.Getenv("HEALTH_DOCUMENT_CHAMPION_CONFIGURATION_ID"))
+	champion := cfg.ChampionConfigurationID
 	if champion == "" {
 		champion = defaultHealthDocumentChampionID
 	}
@@ -179,7 +182,7 @@ func NewHealthDocumentDeploymentPolicy() (*HealthDocumentDeploymentPolicy, error
 		return nil, fmt.Errorf("invalid health-document champion configuration id %q", champion)
 	}
 
-	qualification := strings.TrimSpace(os.Getenv("HEALTH_DOCUMENT_QUALIFICATION_CONFIGURATION_ID"))
+	qualification := cfg.QualificationConfigurationID
 	if qualification == "" {
 		qualification = healthDocumentCandidateConfigurationID
 	}
@@ -188,7 +191,7 @@ func NewHealthDocumentDeploymentPolicy() (*HealthDocumentDeploymentPolicy, error
 		return nil, fmt.Errorf("invalid health-document qualification configuration id %q", qualification)
 	}
 
-	rollback := strings.TrimSpace(os.Getenv("HEALTH_DOCUMENT_ROLLBACK_CONFIGURATION_ID"))
+	rollback := cfg.RollbackConfigurationID
 	if rollback == "" {
 		rollback = tesseractChampionConfigurationID
 	}

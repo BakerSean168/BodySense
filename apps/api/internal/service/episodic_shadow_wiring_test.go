@@ -1,7 +1,6 @@
 package service
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -30,54 +29,18 @@ func TestEpisodicDistillationTriggerWiringFollowsSwitch(t *testing.T) {
 }
 
 // The pass and proposal deadlines used to be fixed at 5s and 20s, which no
-// real model round trip could meet. Resolution follows the AI runtime and
-// consultation execution precedents: unset, non-numeric, zero, or negative
-// values keep the safe default.
-func TestEpisodicDistillationTimeoutsResolution(t *testing.T) {
-	cases := []struct {
-		name    string
-		env     string
-		value   string
-		unset   bool
-		resolve func() time.Duration
-		want    time.Duration
-	}{
-		{name: "proposal unset uses default", env: episodicProposalTimeoutEnv, unset: true, resolve: episodicProposalTimeout, want: 120 * time.Second},
-		{name: "proposal configured seconds override default", env: episodicProposalTimeoutEnv, value: "180", resolve: episodicProposalTimeout, want: 180 * time.Second},
-		{name: "proposal non numeric falls back to default", env: episodicProposalTimeoutEnv, value: "two-minutes", resolve: episodicProposalTimeout, want: 120 * time.Second},
-		{name: "proposal zero falls back to default", env: episodicProposalTimeoutEnv, value: "0", resolve: episodicProposalTimeout, want: 120 * time.Second},
-		{name: "proposal negative falls back to default", env: episodicProposalTimeoutEnv, value: "-30", resolve: episodicProposalTimeout, want: 120 * time.Second},
-		{name: "pass budget unset uses default", env: episodicPassBudgetEnv, unset: true, resolve: episodicPassBudget, want: 600 * time.Second},
-		{name: "pass budget configured seconds override default", env: episodicPassBudgetEnv, value: "900", resolve: episodicPassBudget, want: 900 * time.Second},
-		{name: "pass budget non numeric falls back to default", env: episodicPassBudgetEnv, value: "ten-minutes", resolve: episodicPassBudget, want: 600 * time.Second},
-		{name: "pass budget zero falls back to default", env: episodicPassBudgetEnv, value: "0", resolve: episodicPassBudget, want: 600 * time.Second},
-		{name: "pass budget negative falls back to default", env: episodicPassBudgetEnv, value: "-30", resolve: episodicPassBudget, want: 600 * time.Second},
+// real model round trip could meet. Budgets now arrive through the injected
+// configuration; this pins the env→trigger wiring, including the fallback
+// rules covered by the config package.
+func TestNewEpisodicDistillationTriggerFromEnvWiresConfiguredTimeouts(t *testing.T) {
+	getenv := func(name string) string {
+		return map[string]string{
+			"EPISODIC_PROPOSAL_TIMEOUT_SECONDS": "180",
+			"EPISODIC_PASS_BUDGET_SECONDS":      "900",
+		}[name]
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Register the ambient values for cleanup before mutating them.
-			t.Setenv(episodicProposalTimeoutEnv, "")
-			t.Setenv(episodicPassBudgetEnv, "")
-			if tc.unset {
-				if err := os.Unsetenv(tc.env); err != nil {
-					t.Fatalf("unset %s: %v", tc.env, err)
-				}
-			} else {
-				t.Setenv(tc.env, tc.value)
-			}
 
-			if got := tc.resolve(); got != tc.want {
-				t.Fatalf("resolve() = %s, want %s", got, tc.want)
-			}
-		})
-	}
-}
-
-func TestNewEpisodicDistillationTriggerWiresConfiguredTimeouts(t *testing.T) {
-	t.Setenv(episodicProposalTimeoutEnv, "180")
-	t.Setenv(episodicPassBudgetEnv, "900")
-
-	trigger := NewEpisodicDistillationTrigger(nil, nil, nil)
+	trigger := NewEpisodicDistillationTriggerFromEnv(getenv, nil, nil, nil)
 	if trigger.proposalTimeout != 180*time.Second {
 		t.Fatalf("proposalTimeout = %s, want 180s", trigger.proposalTimeout)
 	}

@@ -4,9 +4,10 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
+
+	"github.com/bodysense/api/internal/config"
 )
 
 const (
@@ -287,15 +288,19 @@ type AgentDeploymentPolicy struct {
 	knowledgeSplitterConfigurationID string
 }
 
-func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
-	diagnosisChampion := strings.TrimSpace(os.Getenv("DIAGNOSIS_CHAMPION_CONFIGURATION_ID"))
+// NewAgentDeploymentPolicy resolves the deployment pointers read by the
+// composition root (see config.Deployment) into the serving policy. Defaults,
+// validation and error text stay here: this is the package that owns what a
+// legal rollout is.
+func NewAgentDeploymentPolicy(cfg config.Deployment) (*AgentDeploymentPolicy, error) {
+	diagnosisChampion := cfg.DiagnosisChampionConfigurationID
 	if diagnosisChampion == "" {
 		diagnosisChampion = defaultDiagnosisConfigurationID
 	}
 	if err := validateDiagnosisConfigurationID(diagnosisChampion); err != nil {
 		return nil, err
 	}
-	diagnosisChallenger := strings.TrimSpace(os.Getenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID"))
+	diagnosisChallenger := cfg.DiagnosisChallengerConfigurationID
 	if diagnosisChallenger != "" {
 		if err := validateDiagnosisConfigurationID(diagnosisChallenger); err != nil {
 			return nil, err
@@ -305,7 +310,7 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		}
 	}
 
-	diagnosisStage := strings.TrimSpace(strings.ToLower(os.Getenv("DIAGNOSIS_ROLLOUT_STAGE")))
+	diagnosisStage := strings.ToLower(cfg.DiagnosisRolloutStage)
 	if diagnosisStage == "" {
 		diagnosisStage = DiagnosisRolloutChampion
 	}
@@ -313,7 +318,7 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		return nil, fmt.Errorf("invalid Diagnosis rollout stage %q", diagnosisStage)
 	}
 	diagnosisCanaryBPS := defaultDiagnosisCanaryBPS
-	if raw := strings.TrimSpace(os.Getenv("DIAGNOSIS_CANARY_BPS")); raw != "" {
+	if raw := cfg.DiagnosisCanaryBPS; raw != "" {
 		value, err := strconv.Atoi(raw)
 		if err != nil {
 			return nil, fmt.Errorf("invalid DIAGNOSIS_CANARY_BPS %q", raw)
@@ -326,11 +331,11 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 	if diagnosisStage == DiagnosisRolloutCanary && !approvedDiagnosisCanaryStep(diagnosisCanaryBPS) {
 		return nil, fmt.Errorf("Diagnosis canary stage requires DIAGNOSIS_CANARY_BPS to be one of 500, 2500, 5000")
 	}
-	diagnosisRolloutSalt := strings.TrimSpace(os.Getenv("DIAGNOSIS_ROLLOUT_SALT"))
+	diagnosisRolloutSalt := cfg.DiagnosisRolloutSalt
 	if diagnosisRolloutSalt == "" {
 		diagnosisRolloutSalt = defaultDiagnosisRolloutSalt
 	}
-	diagnosisPromotionRecord := strings.TrimSpace(os.Getenv("DIAGNOSIS_PROMOTION_RECORD"))
+	diagnosisPromotionRecord := cfg.DiagnosisPromotionRecord
 	if diagnosisStage == DiagnosisRolloutShadow || diagnosisStage == DiagnosisRolloutCanary || diagnosisStage == DiagnosisRolloutPromoted {
 		if diagnosisChallenger == "" {
 			return nil, fmt.Errorf("Diagnosis rollout stage %q requires a distinct active challenger configuration", diagnosisStage)
@@ -345,14 +350,14 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		}
 	}
 
-	treatmentChampion := strings.TrimSpace(os.Getenv("TREATMENT_CHAMPION_CONFIGURATION_ID"))
+	treatmentChampion := cfg.TreatmentChampionConfigurationID
 	if treatmentChampion == "" {
 		treatmentChampion = defaultTreatmentConfigurationID
 	}
 	if err := validateTreatmentConfigurationID(treatmentChampion); err != nil {
 		return nil, err
 	}
-	treatmentChallenger := strings.TrimSpace(os.Getenv("TREATMENT_CHALLENGER_CONFIGURATION_ID"))
+	treatmentChallenger := cfg.TreatmentChallengerConfigurationID
 	if treatmentChallenger != "" {
 		if err := validateTreatmentConfigurationID(treatmentChallenger); err != nil {
 			return nil, err
@@ -362,7 +367,7 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		}
 	}
 
-	treatmentStage := strings.TrimSpace(strings.ToLower(os.Getenv("TREATMENT_ROLLOUT_STAGE")))
+	treatmentStage := strings.ToLower(cfg.TreatmentRolloutStage)
 	if treatmentStage == "" {
 		treatmentStage = TreatmentRolloutChampion
 	}
@@ -370,7 +375,7 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		return nil, fmt.Errorf("invalid Treatment rollout stage %q", treatmentStage)
 	}
 	treatmentCanaryBPS := defaultTreatmentCanaryBPS
-	if raw := strings.TrimSpace(os.Getenv("TREATMENT_CANARY_BPS")); raw != "" {
+	if raw := cfg.TreatmentCanaryBPS; raw != "" {
 		value, err := strconv.Atoi(raw)
 		if err != nil {
 			return nil, fmt.Errorf("invalid TREATMENT_CANARY_BPS %q", raw)
@@ -383,11 +388,11 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 	if treatmentStage == TreatmentRolloutCanary && !approvedTreatmentCanaryStep(treatmentCanaryBPS) {
 		return nil, fmt.Errorf("Treatment canary stage requires TREATMENT_CANARY_BPS to be one of 500, 2500, 5000")
 	}
-	treatmentRolloutSalt := strings.TrimSpace(os.Getenv("TREATMENT_ROLLOUT_SALT"))
+	treatmentRolloutSalt := cfg.TreatmentRolloutSalt
 	if treatmentRolloutSalt == "" {
 		treatmentRolloutSalt = defaultTreatmentRolloutSalt
 	}
-	treatmentPromotionRecord := strings.TrimSpace(os.Getenv("TREATMENT_PROMOTION_RECORD"))
+	treatmentPromotionRecord := cfg.TreatmentPromotionRecord
 	if treatmentStage == TreatmentRolloutShadow || treatmentStage == TreatmentRolloutCanary || treatmentStage == TreatmentRolloutPromoted {
 		if treatmentChallenger == "" {
 			return nil, fmt.Errorf("Treatment rollout stage %q requires a distinct active challenger configuration", treatmentStage)
@@ -397,14 +402,14 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		}
 	}
 
-	assessmentChampion := strings.TrimSpace(os.Getenv("ASSESSMENT_CHAMPION_CONFIGURATION_ID"))
+	assessmentChampion := cfg.AssessmentChampionConfigurationID
 	if assessmentChampion == "" {
 		assessmentChampion = defaultAssessmentConfigurationID
 	}
 	if err := validateAssessmentServingConfigurationID(assessmentChampion); err != nil {
 		return nil, err
 	}
-	assessmentChallenger := strings.TrimSpace(os.Getenv("ASSESSMENT_CHALLENGER_CONFIGURATION_ID"))
+	assessmentChallenger := cfg.AssessmentChallengerConfigurationID
 	if assessmentChallenger == "" {
 		// No challenger yet: Assessment has a single Champion configuration.
 		assessmentChallenger = assessmentChampion
@@ -413,7 +418,7 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		return nil, err
 	}
 
-	assessmentStage := strings.TrimSpace(strings.ToLower(os.Getenv("ASSESSMENT_ROLLOUT_STAGE")))
+	assessmentStage := strings.ToLower(cfg.AssessmentRolloutStage)
 	if assessmentStage == "" {
 		assessmentStage = AssessmentRolloutChampion
 	}
@@ -432,7 +437,7 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		}
 	}
 	assessmentCanaryBPS := defaultAssessmentCanaryBPS
-	if raw := strings.TrimSpace(os.Getenv("ASSESSMENT_CANARY_BPS")); raw != "" {
+	if raw := cfg.AssessmentCanaryBPS; raw != "" {
 		value, err := strconv.Atoi(raw)
 		if err != nil {
 			return nil, fmt.Errorf("invalid ASSESSMENT_CANARY_BPS %q", raw)
@@ -445,11 +450,11 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 	if assessmentStage == AssessmentRolloutCanary && (assessmentCanaryBPS <= 0 || assessmentCanaryBPS >= 10000) {
 		return nil, fmt.Errorf("canary stage requires ASSESSMENT_CANARY_BPS between 1 and 9999")
 	}
-	assessmentRolloutSalt := strings.TrimSpace(os.Getenv("ASSESSMENT_ROLLOUT_SALT"))
+	assessmentRolloutSalt := cfg.AssessmentRolloutSalt
 	if assessmentRolloutSalt == "" {
 		assessmentRolloutSalt = defaultAssessmentRolloutSalt
 	}
-	assessmentPromotionRecord := strings.TrimSpace(os.Getenv("ASSESSMENT_PROMOTION_RECORD"))
+	assessmentPromotionRecord := cfg.AssessmentPromotionRecord
 	if assessmentStage == AssessmentRolloutShadow || assessmentStage == AssessmentRolloutCanary || assessmentStage == AssessmentRolloutPromoted {
 		if assessmentPromotionRecord == "" {
 			return nil, fmt.Errorf(
@@ -459,7 +464,7 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		}
 	}
 
-	consultationChampion := strings.TrimSpace(os.Getenv("CONSULTATION_CHAMPION_CONFIGURATION_ID"))
+	consultationChampion := cfg.ConsultationChampionConfigurationID
 	if consultationChampion == "" {
 		consultationChampion = defaultConsultationConfigurationID
 	}
@@ -467,7 +472,7 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		return nil, err
 	}
 
-	postureChampion := strings.TrimSpace(os.Getenv("POSTURE_CHAMPION_CONFIGURATION_ID"))
+	postureChampion := cfg.PostureChampionConfigurationID
 	if postureChampion == "" {
 		postureChampion = defaultPostureConfigurationID
 	}
@@ -475,14 +480,14 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		return nil, err
 	}
 
-	knowledgeCurator := strings.TrimSpace(os.Getenv("KNOWLEDGE_CURATOR_CONFIGURATION_ID"))
+	knowledgeCurator := cfg.KnowledgeCuratorConfigurationID
 	if knowledgeCurator == "" {
 		knowledgeCurator = defaultKnowledgeCuratorConfigurationID
 	}
 	if err := validateKnowledgeCuratorConfigurationID(knowledgeCurator); err != nil {
 		return nil, err
 	}
-	knowledgeSplitter := strings.TrimSpace(os.Getenv("KNOWLEDGE_SPLITTER_CONFIGURATION_ID"))
+	knowledgeSplitter := cfg.KnowledgeSplitterConfigurationID
 	if knowledgeSplitter == "" {
 		knowledgeSplitter = defaultKnowledgeSplitterConfigurationID
 	}
