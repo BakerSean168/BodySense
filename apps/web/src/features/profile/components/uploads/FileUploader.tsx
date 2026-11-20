@@ -128,6 +128,8 @@ export function FileUploader({ onUploadComplete }: FileUploaderProps) {
             : "border-gray-300 hover:border-gray-400"
         } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
       >
+        {/* U5 豁免：上传必须走系统文件对话框，只能用原生 <input type="file">；
+            控件隐藏，由外层拖拽区点击触发。 */}
         <input
           ref={fileInputRef}
           type="file"
