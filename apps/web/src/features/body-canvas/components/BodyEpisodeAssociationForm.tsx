@@ -5,6 +5,7 @@ import type {
   EpisodeSourceOption,
 } from "../model/bodyEpisodeAssociations";
 import { SelectField } from "@/components/ui/select";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const MODE_OPTIONS = [
   { value: "create", label: "新建症状经历" },
@@ -98,7 +99,7 @@ export function BodyEpisodeAssociationForm({
         </label>
       ) : null}
       {sources.length === 0 ? (
-        <p className="bc-window-note">没有可用的症状陈述</p>
+        <EmptyState size="sm" title="没有可用的症状陈述" />
       ) : null}
       {factsHasNextPage ? (
         <button

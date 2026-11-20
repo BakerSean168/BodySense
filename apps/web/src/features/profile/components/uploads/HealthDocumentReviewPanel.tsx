@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useAuthStore } from "@/stores/authStore";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDisplayValue } from "@/lib/displayValue";
 import {
   appendHealthDocumentReview,
@@ -224,9 +225,11 @@ export function HealthDocumentReviewPanel({
       )}
 
       {!loadError && reviewItems.length === 0 ? (
-        <p className="text-xs text-gray-500" role="status">
-          当前没有需要人工处理的指标。
-        </p>
+        <EmptyState
+          size="sm"
+          role="status"
+          title="当前没有需要人工处理的指标。"
+        />
       ) : (
         <div className="space-y-3">
           {reviewItems.map((projection) => {

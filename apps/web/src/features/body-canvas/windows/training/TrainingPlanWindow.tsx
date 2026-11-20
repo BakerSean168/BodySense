@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 import { WindowLoading } from "../../components/WindowLoading";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { TrainingIcon } from "../../components/TrainingIcon";
 import { projectTrainingWindow } from "../../model/trainingPlans";
 import type { TrainingPlanWindowProps } from "./types";
@@ -64,19 +65,21 @@ export function TrainingPlanWindow({
     case "empty":
       body = (
         <div className="bc-dx-outcome bc-tp-empty" data-testid="training-empty">
-          <div className="bc-dx-state">
-            <span className="bc-dx-state-halo" aria-hidden="true">
-              <TrainingIcon size={22} />
-            </span>
-            <p className="bc-dx-state-title">还没有训练计划</p>
-            <button
-              type="button"
-              className="bc-dx-tonal bc-tp-chat"
-              onClick={controls.onOpenChat}
-            >
-              去对话
-            </button>
-          </div>
+          <EmptyState
+            size="lg"
+            className="py-0"
+            icon={<TrainingIcon size={24} />}
+            title="还没有训练计划"
+            action={
+              <button
+                type="button"
+                className="bc-dx-tonal bc-tp-chat"
+                onClick={controls.onOpenChat}
+              >
+                去对话
+              </button>
+            }
+          />
         </div>
       );
       break;

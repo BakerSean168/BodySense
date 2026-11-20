@@ -6,6 +6,7 @@ import {
   Stethoscope,
 } from "lucide-react";
 import { WindowLoading } from "../../components/WindowLoading";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { DiagnosisRunView } from "../../model/diagnosisDecisionViewModel";
 import { Banner, Chip, Mark, StateBlock } from "./DiagnosisPrimitives";
 
@@ -144,23 +145,25 @@ export function EmptyScene({ onOpenChat }: { onOpenChat?: () => void }) {
       className="bc-window-empty bc-dx-outcome"
       data-testid="diagnosis-empty"
     >
-      <StateBlock
-        tone="idle"
-        icon={<Stethoscope size={18} strokeWidth={2.2} />}
+      <EmptyState
+        size="lg"
+        className="py-0"
+        icon={<Stethoscope size={24} strokeWidth={2.2} />}
         title="还没有诊断"
         description="记录足够后，可以在对话里请求一次正式分析"
-      >
-        {onOpenChat ? (
-          <button
-            type="button"
-            className="bc-dx-icon-button"
-            aria-label="在对话里请求正式分析"
-            onClick={onOpenChat}
-          >
-            <MessageCircle size={16} aria-hidden="true" />
-          </button>
-        ) : null}
-      </StateBlock>
+        action={
+          onOpenChat ? (
+            <button
+              type="button"
+              className="bc-dx-icon-button"
+              aria-label="在对话里请求正式分析"
+              onClick={onOpenChat}
+            >
+              <MessageCircle size={16} aria-hidden="true" />
+            </button>
+          ) : undefined
+        }
+      />
     </div>
   );
 }

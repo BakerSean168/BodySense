@@ -15,6 +15,7 @@ import type {
   PendingInteraction,
 } from "../../types/consultation";
 import { useUploadStore } from "@/stores/uploadStore";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useConsultationStore } from "@/stores/consultationStore";
 import { consultationApi } from "../../services/consultationService";
 import { BODY_STATE_SUGGESTION_DECLINE } from "../BodyStateSuggestionCard";
@@ -310,32 +311,30 @@ export function ChatContent({
             <div
               className={
                 isEmptyConversation
-                  ? "flex flex-1 flex-col items-center justify-center px-4 pb-10 text-center"
+                  ? "flex flex-1 items-center justify-center px-4 pb-10"
                   : "hidden"
               }
             >
-              <div className="chat-empty-icon mb-5 flex size-11 items-center justify-center rounded-[16px] border border-white/[0.08] bg-white/[0.035] text-[#83d4aa] shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
-                <svg
-                  className="size-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.6}
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M3.75 12h3l1.5-4.5 3 9 2.25-6 1.5 1.5h5.25"
-                  />
-                </svg>
-              </div>
-              <h2 className="chat-empty-title text-xl font-medium tracking-[-0.02em] text-white/90">
-                有什么身体变化想告诉我？
-              </h2>
-              <p className="chat-empty-text mt-2 max-w-sm text-sm leading-6 text-white/42">
-                描述不适、体态或最近的变化。
-              </p>
+              <EmptyState
+                size="lg"
+                icon={
+                  <svg
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.6}
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3.75 12h3l1.5-4.5 3 9 2.25-6 1.5 1.5h5.25"
+                    />
+                  </svg>
+                }
+                title="有什么身体变化想告诉我？"
+                description="描述不适、体态或最近的变化。"
+              />
             </div>
           </ThreadPrimitive.Empty>
 

@@ -11,6 +11,7 @@ import { useUploadStore } from "@/stores/uploadStore";
 import { useAuthStore } from "@/stores/authStore";
 import { errorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ProfileView } from "./ProfileView";
 import { ProfileEdit } from "./ProfileEdit";
@@ -139,18 +140,20 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
                 <BodyMetricsPanel />
               </div>
             ) : error ? null : (
-              <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-                <p className="text-sm font-semibold">身体档案尚未建立</p>
-                <Button
-                  className="mt-4"
-                  onClick={() => {
-                    onOpenChange(false);
-                    navigate("/onboarding");
-                  }}
-                >
-                  开始填写
-                </Button>
-              </div>
+              <EmptyState
+                className="rounded-2xl border border-dashed border-border"
+                title="身体档案尚未建立"
+                action={
+                  <Button
+                    onClick={() => {
+                      onOpenChange(false);
+                      navigate("/onboarding");
+                    }}
+                  >
+                    开始填写
+                  </Button>
+                }
+              />
             )
           ) : null}
 
