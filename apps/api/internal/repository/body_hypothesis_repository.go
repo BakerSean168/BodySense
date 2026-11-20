@@ -64,7 +64,7 @@ func (r *BodyStateRepository) RecordBodyHypothesis(ctx context.Context, owner uu
 			return err
 		}
 		if state.CurrentRevision != command.ExpectedRevision {
-			return fmt.Errorf("%w: hypothesis revision %d != current %d", ErrBodyStateRevisionConflict, command.ExpectedRevision, state.CurrentRevision)
+			return fmt.Errorf("%w: hypothesis revision %d != current %d", model.ErrBodyStateRevisionConflict, command.ExpectedRevision, state.CurrentRevision)
 		}
 		now := time.Now().UTC().Truncate(time.Microsecond)
 		evidence := model.StatementEvidence{ID: uuid.New(), UserID: owner, SourceKind: "direct_edit",
@@ -129,7 +129,7 @@ func (r *BodyStateRepository) WithdrawBodyHypothesis(ctx context.Context, owner,
 			return err
 		}
 		if state.CurrentRevision != command.ExpectedRevision {
-			return fmt.Errorf("%w: expected %d, current %d", ErrBodyStateRevisionConflict, command.ExpectedRevision, state.CurrentRevision)
+			return fmt.Errorf("%w: expected %d, current %d", model.ErrBodyStateRevisionConflict, command.ExpectedRevision, state.CurrentRevision)
 		}
 		if original.AssertionStatus != "asserted" {
 			return model.ErrBodyHypothesisNotCurrent
@@ -244,7 +244,7 @@ func (r *BodyStateRepository) CorrectBodyHypothesis(ctx context.Context, owner, 
 			return err
 		}
 		if state.CurrentRevision != command.ExpectedRevision {
-			return fmt.Errorf("%w: expected %d, current %d", ErrBodyStateRevisionConflict, command.ExpectedRevision, state.CurrentRevision)
+			return fmt.Errorf("%w: expected %d, current %d", model.ErrBodyStateRevisionConflict, command.ExpectedRevision, state.CurrentRevision)
 		}
 		if original.AssertionStatus != "asserted" {
 			return model.ErrBodyHypothesisNotCurrent

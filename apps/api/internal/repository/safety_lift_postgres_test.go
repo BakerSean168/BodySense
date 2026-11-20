@@ -32,7 +32,7 @@ func TestSafetyExpiryUsesGoClockAndExactVersionPostgres(t *testing.T) {
 		}
 		now = until
 		cmd.ExpectedRestrictionVersion = 2
-		if _, err := repo.ResolveSafetyRestriction(context.Background(), owner, rows[0].ID, cmd); !errors.Is(err, ErrBodyStateRevisionConflict) {
+		if _, err := repo.ResolveSafetyRestriction(context.Background(), owner, rows[0].ID, cmd); !errors.Is(err, model.ErrBodyStateRevisionConflict) {
 			t.Fatalf("stale target=%v", err)
 		}
 		cmd.ExpectedRestrictionVersion = 1
@@ -139,7 +139,7 @@ func TestSafetyReverificationRequiresExactAcceptedAskUserPostgres(t *testing.T) 
 					cmd.SourceVersion = 2
 				case "wrong-restriction-version":
 					cmd.ExpectedRestrictionVersion = 2
-					want = ErrBodyStateRevisionConflict
+					want = model.ErrBodyStateRevisionConflict
 				}
 				repo := NewBodyStateRepository(tx)
 				receipt, err := repo.ResolveSafetyRestriction(context.Background(), owner, rows[0].ID, cmd)
@@ -239,7 +239,7 @@ func TestSafetyResolutionConcurrentNewScreenPreservesRestrictionsPostgres(t *tes
 		err := <-results
 		if err == nil {
 			passed++
-		} else if !errors.Is(err, ErrBodyStateRevisionConflict) {
+		} else if !errors.Is(err, model.ErrBodyStateRevisionConflict) {
 			t.Fatal(err)
 		}
 	}

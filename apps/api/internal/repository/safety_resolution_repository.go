@@ -89,7 +89,7 @@ func (r *BodyStateRepository) ResolveSafetyRestriction(ctx context.Context, owne
 			return err
 		}
 		if restriction.CreatedRevision != command.ExpectedRestrictionVersion {
-			return fmt.Errorf("%w: stale restriction version", ErrBodyStateRevisionConflict)
+			return fmt.Errorf("%w: stale restriction version", model.ErrBodyStateRevisionConflict)
 		}
 		if evidence != nil {
 			var uses int64
@@ -101,7 +101,7 @@ func (r *BodyStateRepository) ResolveSafetyRestriction(ctx context.Context, owne
 			}
 		}
 		if state.CurrentRevision != command.ExpectedRevision {
-			return fmt.Errorf("%w: stale safety revision", ErrBodyStateRevisionConflict)
+			return fmt.Errorf("%w: stale safety revision", model.ErrBodyStateRevisionConflict)
 		}
 		output = model.SafetyResolution{ID: uuid.New(), UserID: owner, RestrictionID: target, RestrictionVersion: restriction.CreatedRevision, SourceVersion: command.SourceVersion, BasisKind: command.BasisKind, SourceLevel: "user_reported", ScopeKind: restriction.ScopeKind, PolicyRevision: model.SafetyResolutionPolicyV1, IdempotencyKey: command.IdempotencyKey, Fingerprint: fingerprint, Revision: next, EventID: uuid.New(), Actor: "user", LiftedAt: now}
 		if evidence != nil {

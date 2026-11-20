@@ -7,7 +7,6 @@ import (
 
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
-	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
 )
 
@@ -45,7 +44,7 @@ func (s *PublicServer) ResolveSafetyRestriction(ctx context.Context, req openapi
 			return resolveSafetyRestrictionError(http.StatusBadRequest, "INVALID_SAFETY_RESOLUTION", "source is not explicit professional clearance"), nil
 		case errors.Is(err, model.ErrSafetyRestrictionNotFound), errors.Is(err, model.ErrSafetyResolutionSourceNotFound):
 			return resolveSafetyRestrictionError(http.StatusNotFound, "NOT_FOUND", "restriction or source not found"), nil
-		case errors.Is(err, model.ErrSafetyRestrictionAlreadyResolved), errors.Is(err, model.ErrSafetyResolutionIdempotencyConflict), errors.Is(err, repository.ErrBodyStateRevisionConflict):
+		case errors.Is(err, model.ErrSafetyRestrictionAlreadyResolved), errors.Is(err, model.ErrSafetyResolutionIdempotencyConflict), errors.Is(err, model.ErrBodyStateRevisionConflict):
 			return resolveSafetyRestrictionError(http.StatusConflict, "SAFETY_RESOLUTION_CONFLICT", "reload restrictions before retrying"), nil
 		default:
 			return resolveSafetyRestrictionError(http.StatusServiceUnavailable, "SAFETY_UNAVAILABLE", "safety clearance could not be confirmed"), nil

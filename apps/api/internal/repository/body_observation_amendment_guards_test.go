@@ -34,7 +34,7 @@ func TestBodyObservationAmendmentForeignNoopStaleAndBlockedSourcePostgres(t *tes
 	newValue.Statement = "My synthetic corrected original value was 65.7 kg"
 	newValue.RawValue = "65.7"
 	if _, err := repo.CorrectDirectObservation(ctx, owner, original.ObservationID,
-		model.AmendBodyObservationCommand{IdempotencyKey: "stale", ExpectedRevision: 0, Replacement: &newValue}); !errors.Is(err, ErrBodyStateRevisionConflict) {
+		model.AmendBodyObservationCommand{IdempotencyKey: "stale", ExpectedRevision: 0, Replacement: &newValue}); !errors.Is(err, model.ErrBodyStateRevisionConflict) {
 		t.Fatalf("stale report rewrote history: %v", err)
 	}
 	if err := db.Model(&model.StatementEvidence{}).
@@ -205,7 +205,7 @@ func TestBodyObservationCompetingExplicitAmendmentsAndGuardedDowngradePostgres(t
 		t.Fatalf("competing explicit withdrawals must choose exactly one: %d", count)
 	}
 	for err := range errs {
-		if !errors.Is(err, ErrBodyStateRevisionConflict) {
+		if !errors.Is(err, model.ErrBodyStateRevisionConflict) {
 			t.Fatalf("non-winning competing command must be stale: %v", err)
 		}
 	}

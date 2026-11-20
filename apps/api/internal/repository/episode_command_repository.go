@@ -67,7 +67,7 @@ func (r *BodyStateRepository) commitEpisodeAssociation(ctx context.Context, owne
 			return err
 		}
 		if state.CurrentRevision != c.ExpectedRevision {
-			return fmt.Errorf("%w: expected %d current %d", ErrBodyStateRevisionConflict, c.ExpectedRevision, state.CurrentRevision)
+			return fmt.Errorf("%w: expected %d current %d", model.ErrBodyStateRevisionConflict, c.ExpectedRevision, state.CurrentRevision)
 		}
 
 		output, err := persistEpisodeAssociation(ctx, tx, state, next, owner, episodeID, c.FactID, operation, c.IdempotencyKey, fingerprint,
@@ -153,7 +153,7 @@ func persistEpisodeAssociation(ctx context.Context, tx *gorm.DB, state *model.Bo
 		var target model.SymptomEpisode
 		err = tx.Where("user_id = ? AND id = ? AND identity_status = ?", owner, episodeID, "current").Take(&target).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrEpisodeNotFound
+			return nil, model.ErrEpisodeNotFound
 		}
 		if err != nil {
 			return nil, err
@@ -195,7 +195,7 @@ func persistEpisodeAssociation(ctx context.Context, tx *gorm.DB, state *model.Bo
 			return nil, err
 		}
 		if sourceCount == 0 {
-			return nil, ErrEpisodeNotFound
+			return nil, model.ErrEpisodeNotFound
 		}
 		// A later explicit current report after a source-backed ended
 		// course is a new Episode identity, never a silent reopening.
