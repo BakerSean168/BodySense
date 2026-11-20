@@ -68,7 +68,7 @@ func TestMaxFileSize(t *testing.T) {
 	}
 }
 
-func TestExecuteOCRCall_Success(t *testing.T) {
+func TestExtractHealthDocument_Success(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/ocr/extract" {
 			http.NotFound(w, r)
@@ -87,10 +87,10 @@ func TestExecuteOCRCall_Success(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc := &UploadService{aiServiceURL: server.URL}
-	respBody, err := svc.executeOCRCall(strings.NewReader("fake pdf"), "application/pdf", healthDocumentCandidateConfigurationID)
+	client := newAIClient(server.URL, uploadJobTimeout)
+	respBody, err := client.ExtractHealthDocument(strings.NewReader("fake pdf"), "application/pdf", healthDocumentCandidateConfigurationID)
 	if err != nil {
-		t.Fatalf("executeOCRCall: %v", err)
+		t.Fatalf("ExtractHealthDocument: %v", err)
 	}
 
 	var result map[string]any
@@ -102,23 +102,23 @@ func TestExecuteOCRCall_Success(t *testing.T) {
 	}
 }
 
-func TestExecuteOCRCall_ServerError(t *testing.T) {
+func TestExtractHealthDocument_ServerError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "error")
 	}))
 	defer server.Close()
 
-	svc := &UploadService{aiServiceURL: server.URL}
-	_, err := svc.executeOCRCall(strings.NewReader("content"), "application/pdf", healthDocumentCandidateConfigurationID)
+	client := newAIClient(server.URL, uploadJobTimeout)
+	_, err := client.ExtractHealthDocument(strings.NewReader("content"), "application/pdf", healthDocumentCandidateConfigurationID)
 	if err == nil {
 		t.Error("expected error for 500, got nil")
 	}
 }
 
-func TestExecuteOCRCall_ConnectionRefused(t *testing.T) {
-	svc := &UploadService{aiServiceURL: "http://127.0.0.1:1"}
-	_, err := svc.executeOCRCall(strings.NewReader("content"), "application/pdf", healthDocumentCandidateConfigurationID)
+func TestExtractHealthDocument_ConnectionRefused(t *testing.T) {
+	client := newAIClient("http://127.0.0.1:1", uploadJobTimeout)
+	_, err := client.ExtractHealthDocument(strings.NewReader("content"), "application/pdf", healthDocumentCandidateConfigurationID)
 	if err == nil {
 		t.Error("expected error for connection refused")
 	}
@@ -255,7 +255,7 @@ func postureResponseBody(t *testing.T, view, configurationID string) []byte {
 	return body
 }
 
-func TestExecutePostureCallPinsConfiguration(t *testing.T) {
+func TestAnalyzePosturePinsConfiguration(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/posture/analyze" {
 			http.NotFound(w, r)
@@ -275,10 +275,10 @@ func TestExecutePostureCallPinsConfiguration(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc := &UploadService{aiServiceURL: server.URL}
-	body, err := svc.executePostureCall(strings.NewReader("fake-image"), "image/jpeg", "side", defaultPostureConfigurationID)
+	client := newAIClient(server.URL, uploadJobTimeout)
+	body, err := client.AnalyzePosture(strings.NewReader("fake-image"), "image/jpeg", "side", defaultPostureConfigurationID)
 	if err != nil {
-		t.Fatalf("executePostureCall: %v", err)
+		t.Fatalf("AnalyzePosture: %v", err)
 	}
 	if _, err := validatePostureAgentResponse(body, defaultPostureConfigurationID); err != nil {
 		t.Fatalf("validate response: %v", err)

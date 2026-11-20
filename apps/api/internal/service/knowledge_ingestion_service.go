@@ -1,14 +1,12 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -112,11 +110,10 @@ type knowledgeJobRuntime interface {
 }
 
 type KnowledgeIngestionService struct {
-	registry     *KnowledgeSourceRegistry
-	jobs         knowledgeJobRuntime
-	deployment   knowledgeIngestionDeployment
-	aiServiceURL string
-	httpClient   *http.Client
+	registry   *KnowledgeSourceRegistry
+	jobs       knowledgeJobRuntime
+	deployment knowledgeIngestionDeployment
+	ai         *AIClient
 }
 
 func NewKnowledgeIngestionService(
@@ -129,11 +126,10 @@ func NewKnowledgeIngestionService(
 		aiServiceURL = "http://localhost:8100"
 	}
 	return &KnowledgeIngestionService{
-		registry:     registry,
-		jobs:         jobs,
-		deployment:   deployment,
-		aiServiceURL: strings.TrimRight(aiServiceURL, "/"),
-		httpClient:   &http.Client{Timeout: 12 * time.Minute},
+		registry:   registry,
+		jobs:       jobs,
+		deployment: deployment,
+		ai:         newAIClient(strings.TrimRight(aiServiceURL, "/"), knowledgeIngestionTimeout),
 	}
 }
 
@@ -373,29 +369,15 @@ func (s *KnowledgeIngestionService) executeVideo(ctx context.Context, input know
 	if input.CuratorConfigurationID != "" {
 		payload["curator_configuration_id"] = input.CuratorConfigurationID
 	}
-	body, _ := json.Marshal(payload)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.aiServiceURL+"/api/knowledge/ingestions/video", bytes.NewReader(body))
+	body, statusCode, err := s.ai.IngestKnowledgeVideo(ctx, payload)
 	if err != nil {
-		return knowledgeIngestResponse{}, 0, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return knowledgeIngestResponse{}, 0, err
-	}
-	defer resp.Body.Close()
-	responseBody, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
-	if err != nil {
-		return knowledgeIngestResponse{}, resp.StatusCode, err
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return knowledgeIngestResponse{}, resp.StatusCode, fmt.Errorf("AI knowledge ingestion returned status %d", resp.StatusCode)
+		return knowledgeIngestResponse{}, statusCode, err
 	}
 	var decoded knowledgeIngestResponse
-	if err := json.Unmarshal(responseBody, &decoded); err != nil {
-		return knowledgeIngestResponse{}, resp.StatusCode, fmt.Errorf("decode AI knowledge ingestion response: %w", err)
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		return knowledgeIngestResponse{}, statusCode, fmt.Errorf("decode AI knowledge ingestion response: %w", err)
 	}
-	return decoded, resp.StatusCode, nil
+	return decoded, statusCode, nil
 }
 
 func (s *KnowledgeIngestionService) failJob(ctx context.Context, job *model.Job, code string, retriable bool, cause error) error {
