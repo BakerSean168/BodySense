@@ -21,10 +21,17 @@ def test_clinical_inputs_never_reference_episodic_recall() -> None:
         assert "episodic_notes" not in source, relative
 
 
+def _is_runtime_boundary(relative: Path) -> bool:
+    """The runtime API boundary forwards the notes; only the thread engine reads them."""
+    return relative.parts[:2] == ("api", "routes") and relative.name.startswith("runtime")
+
+
 def test_episodic_recall_only_reaches_the_consultation_system_prompt() -> None:
     holders = []
     for path in SRC.rglob("*.py"):
-        if path.name == "runtime.py" or path.name.startswith("consultation_thread"):
+        if _is_runtime_boundary(path.relative_to(SRC)) or path.name.startswith(
+            "consultation_thread"
+        ):
             continue
         if "episodic_notes" in path.read_text(encoding="utf-8"):
             holders.append(str(path.relative_to(SRC)))
