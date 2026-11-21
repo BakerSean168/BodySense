@@ -62,6 +62,8 @@ def test_go_control_plane_registers_every_repository_treatment_manifest() -> Non
     repo_root = Path(__file__).resolve().parents[4]
     go_policy = (repo_root / "apps/api/internal/service/agent_deployment_policy.go").read_text(
         encoding="utf-8"
+    ) + (repo_root / "apps/api/internal/service/agent_deployment_policy_registry.go").read_text(
+        encoding="utf-8"
     ) + (repo_root / "apps/api/internal/service/treatment_decision_policy.go").read_text(
         encoding="utf-8"
     )
