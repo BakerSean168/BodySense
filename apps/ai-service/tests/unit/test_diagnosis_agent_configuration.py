@@ -149,10 +149,16 @@ def test_unknown_configuration_is_rejected() -> None:
 
 def test_go_control_plane_registers_every_repository_diagnosis_manifest() -> None:
     repo_root = Path(__file__).resolve().parents[4]
-    go_policy = (repo_root / "apps/api/internal/service/agent_deployment_policy.go").read_text(
-        encoding="utf-8"
-    ) + (repo_root / "apps/api/internal/service/diagnosis_decision_policy.go").read_text(
-        encoding="utf-8"
+    go_policy = (
+        (repo_root / "apps/api/internal/service/agent_deployment_policy.go").read_text(
+            encoding="utf-8"
+        )
+        + (repo_root / "apps/api/internal/service/agent_deployment_policy_registry.go").read_text(
+            encoding="utf-8"
+        )
+        + (repo_root / "apps/api/internal/service/diagnosis_decision_policy.go").read_text(
+            encoding="utf-8"
+        )
     )
     manifests = [load_manifest(path) for path in sorted(CONFIG_ROOT.glob("diagnosis-*.yaml"))]
     assert get_default_diagnosis_configuration() in manifests
