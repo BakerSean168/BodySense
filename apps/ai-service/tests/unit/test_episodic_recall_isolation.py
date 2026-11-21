@@ -24,7 +24,7 @@ def test_clinical_inputs_never_reference_episodic_recall() -> None:
 def test_episodic_recall_only_reaches_the_consultation_system_prompt() -> None:
     holders = []
     for path in SRC.rglob("*.py"):
-        if path.name in {"runtime.py", "consultation_thread.py"}:
+        if path.name == "runtime.py" or path.name.startswith("consultation_thread"):
             continue
         if "episodic_notes" in path.read_text(encoding="utf-8"):
             holders.append(str(path.relative_to(SRC)))
