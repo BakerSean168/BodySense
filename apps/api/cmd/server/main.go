@@ -3,11 +3,7 @@ package main
 import (
 	"context"
 	"log"
-	"log/slog"
-	"net"
-	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/bodysense/api/internal/auth"
@@ -23,12 +19,8 @@ import (
 	"github.com/bodysense/api/internal/service"
 	"github.com/bodysense/api/internal/transport/httpapi"
 	"github.com/bodysense/api/internal/uploadstorage"
-	"github.com/gin-contrib/requestid"
-	ginslog "github.com/gin-contrib/slog"
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
-	"gorm.io/gorm"
 )
 
 func main() {
@@ -43,39 +35,7 @@ func main() {
 	// environment; every layer below receives the resolved values.
 	apiConfig := config.Load(os.Getenv)
 
-	// Reject invalid privacy-gate configuration before DB/Redis connections,
-	// migrations, background workers or external services are initialized.
-	// Database connection
-	dbCfg := database.ConfigFromEnv()
-	db, err := database.Connect(dbCfg)
-	if err != nil {
-		log.Fatalf("Database connection failed: %v", err)
-	}
-	_ = db
-
-	// Run migrations
-	if err := database.RunMigrations(dbCfg); err != nil {
-		log.Fatalf("Database migration failed: %v", err)
-	}
-
-	// Redis connection
-	redisCfg := database.RedisConfigFromEnv()
-	_, err = database.ConnectRedis(redisCfg)
-	if err != nil {
-		log.Fatalf("Redis connection failed: %v", err)
-	}
-
-	corsOrigins := parseCORSOrigins()
-	// Hosted Supabase is the only identity authority. Go verifies its ES256
-	// access tokens and keeps the existing local health-data ownership boundary.
-	supabaseConfig, err := auth.SupabaseConfigFromEnv()
-	if err != nil {
-		log.Fatalf("Supabase Auth configuration failed: %v", err)
-	}
-	supabaseVerifier, err := auth.NewSupabaseVerifier(supabaseConfig.URL, nil)
-	if err != nil {
-		log.Fatalf("Supabase JWT verifier failed: %v", err)
-	}
+	corsOrigins, supabaseConfig, supabaseVerifier := initInfrastructure()
 
 	// Initialize dependencies
 	userRepo := repository.NewUserRepository(database.DB)
@@ -307,71 +267,7 @@ func main() {
 	port := os.Getenv("API_PORT")
 	listenAddress := resolveAPIListenAddress(host, port)
 
-	r := gin.New()
-	r.Use(requestid.New())
-	r.Use(ginslog.SetLogger(
-		ginslog.WithLogger(func(c *gin.Context, _ *slog.Logger) *slog.Logger {
-			return slog.Default().With("http_request_id", requestid.Get(c))
-		}),
-		ginslog.WithContext(sanitizeHTTPRequestLogRecord),
-		ginslog.WithSkipPath([]string{"/api/health"}),
-		ginslog.WithMessage("http request"),
-		ginslog.WithUTC(true),
-		ginslog.WithRequestHeader(false),
-	))
-	r.Use(gin.Recovery())
-	if err := r.SetTrustedProxies(parseTrustedProxies()); err != nil {
-		log.Fatalf("invalid TRUSTED_PROXIES configuration: %v", err)
-	}
-
-	// CORS middleware. Production is same-origin, but explicit credentialed
-	// CORS remains available for bounded development/test topologies.
-	r.Use(func(c *gin.Context) {
-		origin := resolveCORSOrigin(c.Request.Header.Get("Origin"), corsOrigins)
-		if origin != "" {
-			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-			c.Writer.Header().Add("Vary", "Origin")
-		}
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
-		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-
-		c.Next()
-	})
-
-	// Health check
-	r.GET("/api/health", func(c *gin.Context) {
-		// Check DB connectivity
-		sqlDB, err := database.DB.DB()
-		dbStatus := "ok"
-		if err != nil || sqlDB.Ping() != nil {
-			dbStatus = "unreachable"
-		}
-
-		// Check Redis connectivity
-		redisStatus := "ok"
-		if err := database.RedisClient.Ping(c.Request.Context()).Err(); err != nil {
-			redisStatus = "unreachable"
-		}
-
-		status := http.StatusOK
-		if dbStatus != "ok" || redisStatus != "ok" {
-			status = http.StatusServiceUnavailable
-		}
-
-		c.JSON(status, gin.H{
-			"status":  "ok",
-			"service": "bodysense-api",
-			"db":      dbStatus,
-			"redis":   redisStatus,
-		})
-	})
+	r := newRouter(corsOrigins)
 
 	// Protected routes. Keep one auth middleware instance so handwritten and
 	// generated OpenAPI routes share the exact same token/session authority.
@@ -411,151 +307,4 @@ func main() {
 	if err := r.Run(listenAddress); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func resolveAPIListenAddress(host, port string) string {
-	host = strings.TrimSpace(host)
-	if host == "" {
-		host = "127.0.0.1"
-	}
-	port = strings.TrimSpace(port)
-	if port == "" {
-		port = "8080"
-	}
-	return net.JoinHostPort(host, port)
-}
-
-// episodicShadowProposerFromEnv wires the S2 HTTP proposer only while the
-// explicit, default-off switch is on. A falsy or absent value returns a nil
-// proposer, which keeps NewEpisodicDistillationTriggerFromEnv inert.
-func episodicShadowProposerFromEnv(
-	getenv func(string) string, client *service.AIClient,
-) service.EpisodicShadowProposer {
-	if !service.EpisodicShadowGenerationEnabledFromEnv(getenv) {
-		return nil
-	}
-	return service.NewEpisodicShadowHTTPProposer(client)
-}
-
-// episodicShadowWriterFromEnv enables admission on the shadow writer only while
-// the same default-off switch is on. NewEpisodicShadowRepository stays
-// disabled by default, so without this step every real selection is rejected
-// with ErrEpisodicShadowDisabled and never persists. With the switch off the
-// writer keeps its disabled semantics.
-func episodicShadowWriterFromEnv(
-	getenv func(string) string, db *gorm.DB,
-) *repository.EpisodicShadowRepository {
-	writer := repository.NewEpisodicShadowRepository(db)
-	if service.EpisodicShadowGenerationEnabledFromEnv(getenv) {
-		return writer.WithShadowAdmissionEnabled(true)
-	}
-	return writer
-}
-
-func startRunLeaseReconciler(
-	runService *service.RunService,
-	conversationService *service.ConversationService,
-	runtimeEventService *service.RuntimeEventService,
-	chatRetention *service.ChatRetentionService,
-) {
-	reconcile := func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		defer cancel()
-		runs, err := runService.ReconcileExpiredRuns(ctx, 100)
-		if err != nil {
-			log.Printf("run lease reconciliation failed: %v", err)
-			return
-		}
-		for i := range runs {
-			run := &runs[i]
-			failedMessage, err := conversationService.FinalizeExecutionLostProjection(ctx, run)
-			if err != nil {
-				log.Printf("finalize execution-lost projection for run %s: %v", run.ID, err)
-			}
-			if err := runtimeEventService.RecordMessageExecutionLost(ctx, run, failedMessage); err != nil {
-				log.Printf("record execution-lost message event for run %s: %v", run.ID, err)
-			}
-			// A lost Run is settled too; let retention catch up past it.
-			chatRetention.OnRunSettled(ctx, run.UserID)
-		}
-	}
-
-	go func() {
-		reconcile()
-		ticker := time.NewTicker(time.Minute)
-		defer ticker.Stop()
-		for range ticker.C {
-			reconcile()
-		}
-	}()
-}
-
-// sanitizeHTTPRequestLogRecord keeps gin-contrib/slog's mature request lifecycle
-// handling while removing fields that are not appropriate for a health product's
-// operational logs. Route/status/latency/request-id are enough for correlation;
-// raw query strings, client IPs and referrers are intentionally excluded.
-func sanitizeHTTPRequestLogRecord(_ *gin.Context, record *slog.Record) *slog.Record {
-	clean := slog.NewRecord(record.Time, record.Level, record.Message, record.PC)
-	record.Attrs(func(attr slog.Attr) bool {
-		switch attr.Key {
-		case "query", "ip", "referer":
-			return true
-		default:
-			clean.AddAttrs(attr)
-			return true
-		}
-	})
-	return &clean
-}
-
-func parseCORSOrigins() []string {
-	raw := os.Getenv("CORS_ORIGINS")
-	if raw == "" {
-		raw = os.Getenv("CORS_ORIGIN")
-	}
-	if raw == "" {
-		return []string{"*"}
-	}
-
-	parts := strings.Split(raw, ",")
-	origins := make([]string, 0, len(parts))
-	for _, part := range parts {
-		origin := strings.TrimSpace(part)
-		if origin != "" {
-			origins = append(origins, origin)
-		}
-	}
-	if len(origins) == 0 {
-		return []string{"*"}
-	}
-	return origins
-}
-
-func resolveCORSOrigin(requestOrigin string, allowed []string) string {
-	for _, origin := range allowed {
-		if origin == "*" {
-			// Credentialed CORS cannot use a wildcard response. Reflect the
-			// requesting origin only in explicitly wildcard development mode.
-			return requestOrigin
-		}
-		if requestOrigin != "" && origin == requestOrigin {
-			return requestOrigin
-		}
-	}
-	return ""
-}
-
-func parseTrustedProxies() []string {
-	raw := strings.TrimSpace(os.Getenv("TRUSTED_PROXIES"))
-	if raw == "" {
-		return []string{"127.0.0.1", "::1"}
-	}
-	parts := strings.Split(raw, ",")
-	proxies := make([]string, 0, len(parts))
-	for _, part := range parts {
-		if proxy := strings.TrimSpace(part); proxy != "" {
-			proxies = append(proxies, proxy)
-		}
-	}
-	return proxies
 }
