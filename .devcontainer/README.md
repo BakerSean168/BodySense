@@ -36,7 +36,7 @@ pnpm install --frozen-lockfile
 pnpm exec nx affected -t lint,typecheck,test --base=origin/main
 ```
 
-Full's `--full-check` verifies Go, Python, uv and Docker Compose. Install Python dependencies on demand with `cd apps/ai-service && uv sync --frozen`; for Go, `cd apps/api && go test ./...`. Start local Compose only if required (`pnpm dev:infra:up`), then stop it. Never run production workloads in Codespaces.
+Full's `--full-check` verifies Go, Python, uv and Docker Compose. Go editor and lint tools are installed only when a task needs them; the profile keeps the repository's Go toolchain without downloading optional latest tools during image creation. Install Python dependencies on demand with `cd apps/ai-service && uv sync --frozen`; for Go, `cd apps/api && go test ./...`. Start local Compose only if required (`pnpm dev:infra:up`), then stop it. Never run production workloads in Codespaces.
 
 No automatic pnpm installation, Go/Python dependency downloads, ML models, Compose startup, swap creation, env copying, or production secrets. Use task-scoped Codespaces secrets, not production credentials. Keep local database ports private.
 
