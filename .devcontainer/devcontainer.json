@@ -24,9 +24,9 @@
       }
     }
   },
-  "forwardPorts": [5173],
+  "forwardPorts": [20100],
   "portsAttributes": {
-    "5173": {
+    "20100": {
       "label": "BodySense Web",
       "onAutoForward": "notify"
     }
