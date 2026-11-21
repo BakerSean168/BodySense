@@ -39,7 +39,7 @@ jobs:
           cat > /tmp/main-protection.json <<'JSON'
           {
             "required_status_checks": {
-              "strict": true,
+              "strict": false,
               "contexts": ["Check"]
             },
             "enforce_admins": true,
