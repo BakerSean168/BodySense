@@ -240,8 +240,14 @@ def test_model_authored_ask_user_cannot_carry_an_intake_binding():
             "consultation_manifest": get_consultation_manifest(None),
         }
         with (
-            patch.object(consultation_thread, "get_consultation_executor", return_value=executor),
-            patch.object(consultation_thread, "interrupt", side_effect=lambda payload: payload),
+            patch(
+                "src.runtime.consultation_thread_tools.get_consultation_executor",
+                return_value=executor,
+            ),
+            patch(
+                "src.runtime.consultation_thread_tools.interrupt",
+                side_effect=lambda payload: payload,
+            ),
         ):
             await consultation_thread.execute_tool(state, writer=writer_events.append)
         assert "purpose" not in captured and "state_binding" not in captured

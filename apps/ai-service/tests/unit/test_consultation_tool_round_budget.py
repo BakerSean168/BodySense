@@ -70,9 +70,8 @@ async def test_same_run_survives_more_than_six_answered_questions() -> None:
             "src.runtime.body_fact_capture.BodyFactIntakeService",
             return_value=intake_without_facts(),
         ),
-        patch.object(
-            consultation_thread,
-            "propose_body_state_suggestion",
+        patch(
+            "src.runtime.consultation_thread_intake.propose_body_state_suggestion",
             new=AsyncMock(return_value={}),
         ),
         patch.object(consultation_thread, "_get_ai_service", return_value=model),
@@ -133,9 +132,8 @@ async def test_unattended_tool_loop_still_stops_after_six_model_calls() -> None:
             "src.runtime.body_fact_capture.BodyFactIntakeService",
             return_value=intake_without_facts(),
         ),
-        patch.object(
-            consultation_thread,
-            "propose_body_state_suggestion",
+        patch(
+            "src.runtime.consultation_thread_intake.propose_body_state_suggestion",
             new=AsyncMock(return_value={}),
         ),
         patch.object(consultation_thread, "_get_ai_service", return_value=model),
