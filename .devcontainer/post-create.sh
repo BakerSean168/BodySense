@@ -22,8 +22,11 @@ case "${1:-}" in
     command -v go >/dev/null || { echo 'Full requires Go' >&2; exit 1; }
     command -v python3.13 >/dev/null || { echo 'Full requires Python 3.13' >&2; exit 1; }
     command -v docker >/dev/null || { echo 'Full requires Docker CLI' >&2; exit 1; }
+    command -v uv >/dev/null || { echo 'Full requires uv' >&2; exit 1; }
     go version | grep -Eq 'go1\.26(\.|[[:space:]])' || { echo 'Full requires Go 1.26' >&2; exit 1; }
     python3.13 -c 'import sys; assert sys.version_info[:2] == (3,13)'
+    uv --version
+    docker compose version
     echo "Full toolchains verified: $(go version), $(python3.13 --version)"
     ;;
   --install)

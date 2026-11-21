@@ -1,6 +1,9 @@
 {
   "name": "BodySense - Codespaces Full",
-  "image": "mcr.microsoft.com/devcontainers/python:3.13-bookworm",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
   "features": {
     "ghcr.io/devcontainers/features/node:2": {
       "version": "24.22.1",
@@ -35,23 +38,31 @@
       }
     }
   },
-  "forwardPorts": [5173, 8080, 8000],
+  "forwardPorts": [20100, 20101, 20102, 20103],
   "portsAttributes": {
-    "5173": {
+    "20100": {
       "label": "BodySense Web",
       "onAutoForward": "notify"
     },
-    "5432": {
-      "label": "Local PostgreSQL",
-      "onAutoForward": "ignore"
+    "20101": {
+      "label": "Go API",
+      "onAutoForward": "notify"
     },
-    "8000": {
+    "20102": {
       "label": "Python AI Service",
       "onAutoForward": "notify"
     },
-    "8080": {
-      "label": "Go API",
+    "20103": {
+      "label": "Document Service",
       "onAutoForward": "notify"
+    },
+    "20110": {
+      "label": "Local PostgreSQL",
+      "onAutoForward": "ignore"
+    },
+    "20111": {
+      "label": "Local Redis",
+      "onAutoForward": "ignore"
     }
   },
   "postCreateCommand": "bash .devcontainer/post-create.sh --full-check"
