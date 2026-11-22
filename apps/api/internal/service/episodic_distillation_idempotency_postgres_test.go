@@ -1,3 +1,8 @@
+// Episodic distillation PostgreSQL scenarios: bounded retries, idempotent
+// replay, tombstone suppression and the generation flag-off path. Requires
+// BODYSENSE_INTEGRATION_DATABASE_URL; fixtures are synthetic and provider
+// calls are faked (shared fixture in episodic_distillation_postgres_test.go).
+
 package service
 
 import (
