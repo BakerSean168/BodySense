@@ -1,9 +1,17 @@
 package service
 
 import (
+	"context"
+	"errors"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/bodysense/api/internal/model"
+	"github.com/bodysense/api/internal/repository"
+	"github.com/google/uuid"
+	"gorm.io/datatypes"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func TestValidateTransition(t *testing.T) {
@@ -93,5 +101,41 @@ func TestJobEventTypeForStatus(t *testing.T) {
 func TestJobStatusHasNoSucceededAlias(t *testing.T) {
 	if _, ok := jobTransitions[model.JobStatus("succeeded")]; ok {
 		t.Fatal("job lifecycle must not retain succeeded as an alias for completed")
+	}
+}
+
+func TestAppendTelemetryEventFailureIncrementsDropCounter(t *testing.T) {
+	sqlDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sqlDB.Close()
+
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runtime := NewJobRuntime(repository.NewJobRepository(gormDB))
+	jobID := uuid.New()
+
+	mock.ExpectBegin()
+	mock.ExpectQuery(`INSERT INTO "job_events"`).
+		WillReturnError(errors.New("job_events insert failed"))
+	mock.ExpectRollback()
+
+	before := JobTelemetryDropped()
+	runtime.appendTelemetryEvent(
+		context.Background(),
+		jobID,
+		"job.progress",
+		datatypes.JSON(`{"step": 1}`),
+	)
+	after := JobTelemetryDropped()
+	if after != before+1 {
+		t.Fatalf("telemetry drop counter not incremented on append failure: before=%d after=%d", before, after)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
 	}
 }
