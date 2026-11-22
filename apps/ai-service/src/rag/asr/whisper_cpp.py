@@ -9,6 +9,7 @@ import subprocess
 import urllib.request
 from pathlib import Path
 
+from ...settings import asr_whisper_model
 from ..knowledge_pack import TranscriptSegment
 from .base import ASRProvider
 
@@ -21,8 +22,6 @@ WHISPER_MODEL_URLS: dict[str, str] = {
     "ggml-base.bin": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
     "ggml-small.bin": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
 }
-
-DEFAULT_MODEL = os.getenv("ASR_WHISPER_MODEL", "ggml-base.bin")
 
 
 def _default_data_root() -> Path:
@@ -49,7 +48,7 @@ class WhisperCppProvider(ASRProvider):
         model_name: str | None = None,
     ):
         self.data_root = Path(data_root or _default_data_root())
-        self.model_name = model_name or DEFAULT_MODEL
+        self.model_name = model_name or asr_whisper_model()
         self._whisper_root = self.data_root / ".cache" / "whisper"
 
     async def transcribe(
@@ -61,7 +60,7 @@ class WhisperCppProvider(ASRProvider):
         if not audio_path.exists():
             raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
-        model_path = self._ensure_model(self.model_name or DEFAULT_MODEL)
+        model_path = self._ensure_model(self.model_name)
         workdir = audio_path.parent
         output_path = workdir / "transcript.raw.jsonl"
 
