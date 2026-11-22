@@ -26,6 +26,8 @@ __all__ = [
     "embedding_model",
     "embedding_provider",
     "embedding_revision",
+    "gateway_api_key",
+    "gateway_base_url",
     "local_embedding_max_concurrency",
 ]
 
@@ -173,3 +175,15 @@ def asr_omni_model(*, env: dict[str, str] | None = None) -> str:
     """Model name for the MiMo omni chat-completions ASR endpoint."""
     lookup = os.environ if env is None else env
     return lookup.get("ASR_API_MODEL", "mimo-v2.5")
+
+
+def gateway_base_url(*, env: dict[str, str] | None = None) -> str:
+    """Base URL of the internal LiteLLM gateway transport."""
+    lookup = os.environ if env is None else env
+    return lookup.get("LITELLM_BASE_URL", "http://localhost:4000/v1").strip()
+
+
+def gateway_api_key(*, env: dict[str, str] | None = None) -> str:
+    """Client credential for the internal LiteLLM gateway transport."""
+    lookup = os.environ if env is None else env
+    return lookup.get("LITELLM_API_KEY", "").strip()
