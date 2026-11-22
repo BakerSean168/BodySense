@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 	"time"
@@ -255,7 +256,17 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 			screen := ""
 			if fact.Kind == "symptom" {
 				var details model.SymptomFactDetails
-				_ = json.Unmarshal(fact.Details, &details)
+				// An undecodable details payload keeps Presence unset, so the
+				// fact is treated as unscreened and still enters the safety
+				// coverage check — the failure direction is fail-closed, hence
+				// tolerate, but leave a log.
+				if err := json.Unmarshal(fact.Details, &details); err != nil {
+					slog.Default().Warn(
+						"symptom fact details are not valid JSON; treating as unscreened",
+						"fact_id", fact.ID,
+						"error", err,
+					)
+				}
 				if details.Presence == "absent" {
 					screen = AgentSymptomNotRequired
 				} else {

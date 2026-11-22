@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/bodysense/api/internal/model"
@@ -216,6 +218,16 @@ func (r *JobRuntime) ClaimPending(ctx context.Context, jobID uuid.UUID) (*model.
 	return job, true, nil
 }
 
+// jobTelemetryDropped counts telemetry events dropped because their append
+// failed. It exists so silent telemetry loss stays observable in-process.
+var jobTelemetryDropped atomic.Int64
+
+// JobTelemetryDropped returns the number of job telemetry events dropped
+// since process start.
+func JobTelemetryDropped() int64 {
+	return jobTelemetryDropped.Load()
+}
+
 func newJobEvent(eventType string, payload any) (*model.JobEvent, error) {
 	event := &model.JobEvent{EventType: eventType}
 	if payload == nil {
@@ -224,6 +236,12 @@ func newJobEvent(eventType string, payload any) (*model.JobEvent, error) {
 	}
 	data, err := json.Marshal(payload)
 	if err != nil {
+		slog.Default().Error(
+			"job telemetry event dropped: marshal failed",
+			"job_id", event.JobID,
+			"event_type", eventType,
+			"error", err,
+		)
 		return nil, fmt.Errorf("marshal job lifecycle event %s: %w", eventType, err)
 	}
 	event.Payload = datatypes.JSON(data)
@@ -239,7 +257,15 @@ func (r *JobRuntime) appendTelemetryEvent(ctx context.Context, jobID uuid.UUID, 
 		return
 	}
 	event.JobID = jobID
-	_ = r.repo.AppendEvent(ctx, event)
+	if err := r.repo.AppendEvent(ctx, event); err != nil {
+		jobTelemetryDropped.Add(1)
+		slog.Default().Error(
+			"job telemetry event dropped: append failed",
+			"job_id", jobID,
+			"event_type", eventType,
+			"error", err,
+		)
+	}
 }
 
 // ValidateTransition checks if a transition is legal without executing it.

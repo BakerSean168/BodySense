@@ -139,7 +139,10 @@ func diagnosisUpdatedClinical(before diagnosisClinicalContent, envelope diagnosi
 		}
 	}
 	var originals map[string]json.RawMessage
-	_ = json.Unmarshal(encoded, &originals)
+	// Same encoded payload already unmarshalled above; unreachable in practice, fail closed to avoid a silent drop.
+	if json.Unmarshal(encoded, &originals) != nil {
+		return before, nil, ErrDiagnosisSettlementInvalid
+	}
 	seen := map[string]bool{}
 	for _, patch := range envelope.ChangeSet {
 		if !diagnosisClinicalFields[patch.Field] || seen[patch.Field] || len(patch.Before) == 0 || len(patch.After) == 0 {
