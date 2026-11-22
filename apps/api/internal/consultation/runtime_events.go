@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -122,7 +122,7 @@ func (r *Runtime) handleAIEvent(
 			committed, facts, err := r.commitBodyFactProposal(ctx, state, event.IDs.ToolCallID, payload.Result)
 			captureErr = err
 			if err != nil {
-				log.Printf("BodyFact proposal rejected: %v", err)
+				slog.Default().Warn("body_fact_proposal_rejected", "error", err)
 				payload.Result = json.RawMessage(`{"status":"rejected","error":"身体记录尚未确认保存，请刷新记录后重试。"}`)
 			} else {
 				payload.Result = committed
@@ -190,7 +190,7 @@ func (r *Runtime) handleAIEvent(
 		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, "phase_change")
 		*phase = string(nextPhase)
 		if err := r.consultationService.UpdatePhase(ctx, state.ConversationID, state.UID, nextPhase); err != nil {
-			log.Printf("failed to update phase for conversation %s: %v", state.ConversationID, err)
+			slog.Default().Error("update_phase_failed", "conversation_id", state.ConversationID, "error", err)
 		}
 
 	case service.ConsultationRuntimeUsageReportedPayload:
@@ -200,7 +200,7 @@ func (r *Runtime) handleAIEvent(
 	case service.ConsultationRuntimeAgentConfigurationPayload:
 		identity, err := validateConsultationExecutionIdentity(event, state.ExpectedConfigurationID)
 		if err != nil {
-			log.Printf("rejected Consultation runtime identity for run %s: %v", state.Run.ID, err)
+			slog.Default().Warn("consultation_runtime_identity_rejected", "run_id", state.Run.ID, "error", err)
 			r.failActiveStream(ctx, sw, state, "runtime Agent configuration identity mismatch")
 			return true
 		}
@@ -209,7 +209,7 @@ func (r *Runtime) handleAIEvent(
 			return true
 		}
 		if err := r.runService.UpdateAgentConfiguration(ctx, state.Run.ID, identity.ConfigurationID, datatypes.JSON(identity.AgentConfiguration), datatypes.JSON(identity.ExecutionProvenance)); err != nil {
-			log.Printf("failed to persist Consultation runtime identity for run %s: %v", state.Run.ID, err)
+			slog.Default().Error("persist_consultation_runtime_identity_failed", "run_id", state.Run.ID, "error", err)
 			r.failActiveStream(ctx, sw, state, "failed to persist runtime Agent configuration identity")
 			return true
 		}
@@ -258,12 +258,12 @@ func (r *Runtime) handleInteractionRequired(
 	}
 	question, bound, err := service.BindSymptomIntakeQuestion(payload.Question, event.IDs.ToolCallID, committedFacts)
 	if err != nil {
-		log.Printf("rejected interaction question for run %s: %v", state.Run.ID, err)
+		slog.Default().Warn("interaction_question_rejected", "run_id", state.Run.ID, "error", err)
 		r.failActiveStream(ctx, sw, state, "invalid user interaction")
 		return true
 	}
 	if !bound && bytes.Contains(payload.Question, []byte(`"state_binding"`)) {
-		log.Printf("stripped unbound symptom intake binding for run %s tool call %s", state.Run.ID, event.IDs.ToolCallID)
+		slog.Default().Warn("stripped_unbound_symptom_intake_binding", "run_id", state.Run.ID, "tool_call_id", event.IDs.ToolCallID)
 	}
 	// A BodyState suggestion arrives only in the typed runtime field and is
 	// bound only against the owner's own cited user message and current
@@ -279,11 +279,11 @@ func (r *Runtime) handleInteractionRequired(
 		var suggestionBound bool
 		question, suggestionBound, err = service.BindBodyStateSuggestionQuestion(ctx, suggestionSources, state.UID, state.ConversationID, question)
 		if err == nil && !suggestionBound && len(payload.Suggestion) > 0 {
-			log.Printf("could not verify body state suggestion for run %s tool call %s", state.Run.ID, event.IDs.ToolCallID)
+			slog.Default().Warn("verify_body_state_suggestion_failed", "run_id", state.Run.ID, "tool_call_id", event.IDs.ToolCallID)
 		}
 	}
 	if err != nil {
-		log.Printf("could not bind body state suggestion for run %s: %v", state.Run.ID, err)
+		slog.Default().Error("bind_body_state_suggestion_failed", "run_id", state.Run.ID, "error", err)
 		r.failActiveStream(ctx, sw, state, "invalid user interaction")
 		return true
 	}
@@ -341,7 +341,7 @@ func (r *Runtime) handleInteractionRequired(
 		nativeIDs...,
 	)
 	if err != nil {
-		log.Printf("failed to atomically create pending interaction for conversation %s: %v", state.ConversationID, err)
+		slog.Default().Error("create_pending_interaction_failed", "conversation_id", state.ConversationID, "error", err)
 		r.sendNewEvent(ctx, sw, "stream", "stream.error", state.BaseIDs, map[string]any{"message": "failed to persist user interaction"}, "", "stream.error")
 		r.clearActiveRun(ctx, state.ConversationID, state.UID)
 		return true
@@ -349,12 +349,12 @@ func (r *Runtime) handleInteractionRequired(
 
 	finalPartsJSON, _ := json.Marshal(result.AssistantParts)
 	if err := r.messageService.UpdateMessageCompletedWithStatus(ctx, state.AssistantMsg.ID, state.ConversationID, datatypes.JSON(finalPartsJSON), "aborted"); err != nil {
-		log.Printf("failed to finalize interrupted assistant message %s: %v", state.AssistantMsg.ID, err)
+		slog.Default().Error("finalize_interrupted_assistant_message_failed", "message_id", state.AssistantMsg.ID, "error", err)
 	}
 
 	for _, preparedEvent := range preparedEvents {
 		if err := sw.WriteEvent(ctx, preparedEvent); err != nil {
-			log.Printf("SSE write error type=%s run_id=%s conversation_id=%s seq=%d: %v", preparedEvent.Type, state.Run.ID, state.ConversationID, preparedEvent.Seq, err)
+			slog.Default().Warn("sse_write_error", "event_type", preparedEvent.Type, "run_id", state.Run.ID, "conversation_id", state.ConversationID, "seq", preparedEvent.Seq, "error", err)
 		}
 	}
 

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"strconv"
 
 	"github.com/bodysense/api/internal/model"
@@ -159,7 +159,7 @@ func (s *DiagnosisFormalAnalysisService) Start(ctx context.Context, owner uuid.U
 		SafetyEnvelope: &envelope, RelevantHistory: historyJSON, Profile: profileJSON,
 	})
 	if err != nil {
-		log.Printf("formal diagnosis agent failed for BodyState R%d user %s: %v", snapshot.CurrentRevision, owner, err)
+		slog.Default().Error("formal_diagnosis_agent_failed", "body_state_revision", snapshot.CurrentRevision, "user_id", owner, "error", err)
 		return nil, ErrDiagnosisAgentUnavailable
 	}
 	var parsed map[string]any

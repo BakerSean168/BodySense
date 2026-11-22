@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -36,7 +36,7 @@ func (s *AgentToolService) RecordToolCall(
 	arguments datatypes.JSON,
 ) {
 	if toolCallID == "" {
-		log.Printf("skipping tool call audit: empty tool_call_id for tool %s", toolName)
+		slog.Default().Warn("skipping_tool_call_audit_empty_id", "tool_name", toolName)
 		return
 	}
 
@@ -51,7 +51,7 @@ func (s *AgentToolService) RecordToolCall(
 	}
 
 	if err := s.repo.UpsertStarted(ctx, tc); err != nil {
-		log.Printf("failed to record tool call %s for run %s: %v", toolCallID, runID, err)
+		slog.Default().Error("record_tool_call_failed", "tool_call_id", toolCallID, "run_id", runID, "error", err)
 	}
 }
 
@@ -71,16 +71,16 @@ func (s *AgentToolService) RecordToolResult(
 	if isError {
 		updated, err := s.repo.MarkFailed(ctx, runID, toolCallID, result)
 		if err != nil {
-			log.Printf("failed to mark tool call %s as failed for run %s: %v", toolCallID, runID, err)
+			slog.Default().Error("mark_tool_call_failed_failed", "tool_call_id", toolCallID, "run_id", runID, "error", err)
 		} else if !updated {
-			log.Printf("ignored stale failed result for terminal tool call %s on run %s", toolCallID, runID)
+			slog.Default().Warn("ignored_stale_failed_result_for_terminal_tool_call", "tool_call_id", toolCallID, "run_id", runID)
 		}
 	} else {
 		updated, err := s.repo.MarkSucceeded(ctx, runID, toolCallID, result)
 		if err != nil {
-			log.Printf("failed to mark tool call %s as succeeded for run %s: %v", toolCallID, runID, err)
+			slog.Default().Error("mark_tool_call_succeeded_failed", "tool_call_id", toolCallID, "run_id", runID, "error", err)
 		} else if !updated {
-			log.Printf("ignored stale succeeded result for terminal tool call %s on run %s", toolCallID, runID)
+			slog.Default().Warn("ignored_stale_succeeded_result_for_terminal_tool_call", "tool_call_id", toolCallID, "run_id", runID)
 		}
 	}
 }

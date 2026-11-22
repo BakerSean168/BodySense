@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -74,7 +74,7 @@ func (s *StatementErasureService) Request(ctx context.Context, userID, statement
 	}
 	if !receipt.Request.Status.Terminal() {
 		if err := s.Process(ctx, receipt.Request.ID); err != nil {
-			log.Printf("statement erasure %s left outstanding: %v", receipt.Request.ID, err)
+			slog.Default().Error("statement_erasure_left_outstanding", "request_id", receipt.Request.ID, "error", err)
 		}
 	}
 	return s.store.Receipt(ctx, userID, receipt.Request.ID)
@@ -140,7 +140,7 @@ func (s *StatementErasureService) eraseRuntimeCopies(ctx context.Context, reques
 	defer cancel()
 	receipt, err := s.runtime.EraseStatementRuntimeCopies(callCtx, request.UserID, request.StatementID, scope)
 	if err != nil {
-		log.Printf("statement erasure %s runtime copies: %v", request.ID, err)
+		slog.Default().Error("statement_erasure_runtime_copies_failed", "request_id", request.ID, "error", err)
 		return unavailable, nil
 	}
 	return model.RuntimeOutcome(scope.ThreadIDs, request.StatementID, receipt), nil
@@ -154,7 +154,7 @@ func (s *StatementErasureService) Recover(ctx context.Context, limit int) (int, 
 	}
 	for _, id := range ids {
 		if err := s.Process(ctx, id); err != nil {
-			log.Printf("statement erasure recovery %s: %v", id, err)
+			slog.Default().Error("statement_erasure_recovery_failed", "request_id", id, "error", err)
 		}
 	}
 	return len(ids), nil
@@ -170,7 +170,7 @@ func (s *StatementErasureService) StartWorker(ctx context.Context, interval time
 		defer ticker.Stop()
 		for {
 			if _, err := s.Recover(ctx, 10); err != nil {
-				log.Printf("statement erasure recovery failed: %v", err)
+				slog.Default().Error("statement_erasure_recovery_failed", "error", err)
 			}
 			select {
 			case <-ctx.Done():

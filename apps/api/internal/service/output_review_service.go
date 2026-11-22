@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -45,6 +45,6 @@ func (s *OutputReviewService) RecordReview(
 	}
 
 	if err := s.repo.Create(ctx, review); err != nil {
-		log.Printf("failed to record output review (type=%s, status=%s): %v", outputType, status, err)
+		slog.Default().Error("record_output_review_failed", "output_type", outputType, "status", status, "error", err)
 	}
 }

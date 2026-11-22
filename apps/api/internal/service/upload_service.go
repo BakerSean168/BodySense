@@ -10,7 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"strings"
@@ -226,17 +226,17 @@ func (s *UploadService) UploadFile(ctx context.Context, userID uuid.UUID, file *
 	}
 
 	if err := s.createDerivedRuns(ctx, asset); err != nil {
-		log.Printf("failed to create derived run rows for asset %s: %v", asset.ID, err)
+		slog.Default().Error("create_derived_run_rows_failed", "asset_id", asset.ID, "error", err)
 	}
 
 	switch fileType {
 	case "report":
 		if _, _, err := s.enqueueOCRJob(ctx, asset.ID, userID); err != nil {
-			log.Printf("failed to enqueue OCR job for asset %s: %v", asset.ID, err)
+			slog.Default().Error("enqueue_ocr_job_failed", "asset_id", asset.ID, "error", err)
 		}
 	case "photo_front", "photo_side", "photo_back":
 		if _, _, err := s.enqueuePostureJob(ctx, asset.ID, userID, fileType); err != nil {
-			log.Printf("failed to enqueue posture job for asset %s: %v", asset.ID, err)
+			slog.Default().Error("enqueue_posture_job_failed", "asset_id", asset.ID, "error", err)
 		}
 	}
 	return s.projectAssetView(ctx, asset)

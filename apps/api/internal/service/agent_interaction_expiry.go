@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/bodysense/api/internal/dto"
@@ -37,7 +37,7 @@ func (s *AgentInteractionService) ExpireExpiredInteractions(
 			}
 		}
 		if expErr != nil {
-			log.Printf("expire interaction %s: %v", item.ID, expErr)
+			slog.Default().Error("expire_interaction_failed", "interaction_id", item.ID, "error", expErr)
 			continue
 		}
 		if updated {
@@ -147,13 +147,13 @@ func (s *AgentInteractionService) StartInteractionExpiryWorker(
 			case <-ticker.C:
 				expired, err := s.ExpireExpiredInteractions(ctx, 100)
 				if err != nil {
-					log.Printf("interaction expiry sweep failed: %v", err)
+					slog.Default().Error("interaction_expiry_sweep_failed", "error", err)
 					continue
 				}
 				if len(expired) == 0 {
 					continue
 				}
-				log.Printf("interaction expiry sweep: expired %d pending interaction(s)", len(expired))
+				slog.Default().Info("interaction_expiry_sweep_expired", "expired_count", len(expired))
 				if onExpired == nil {
 					continue
 				}

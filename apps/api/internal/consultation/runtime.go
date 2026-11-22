@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -222,7 +222,7 @@ func (r *Runtime) StartRun(
 			// Same request_id is an idempotent transport re-attachment, not a
 			// second business command. This is important when a browser/proxy
 			// rebuilds an SSE POST after the original socket disappears.
-			log.Printf("consultation transport reattach request_id=%s run_id=%s conversation_id=%s status=%s", req.RequestID, existing.ID, existing.ConversationID, existing.Status)
+			slog.Default().Info("consultation_transport_reattach", "request_id", req.RequestID, "run_id", existing.ID, "conversation_id", existing.ConversationID, "status", existing.Status)
 			r.reattachActiveRun(ctx, w, existing)
 			return nil
 		}
@@ -424,14 +424,14 @@ func (r *Runtime) finishTurn(
 		map[string]any{"status": "completed", "usage": result.Usage}, "",
 	)
 	if err != nil {
-		log.Printf("failed to build run.completed event for %s: %v", run.ID, err)
+		slog.Default().Error("build_run_completed_event_failed", "run_id", run.ID, "error", err)
 		return false
 	}
 	completed, err := r.runService.TryCompleteRunWithEvent(
 		terminalCtx, run, uid, result.Usage, result.ProviderResponseID, runCompletedEvent,
 	)
 	if err != nil {
-		log.Printf("failed to complete run %s atomically with lifecycle event: %v", run.ID, err)
+		slog.Default().Error("complete_run_atomically_failed", "run_id", run.ID, "error", err)
 		return false
 	}
 	if !completed {
@@ -449,13 +449,13 @@ func (r *Runtime) finishTurn(
 		nil,
 	); err != nil {
 		messagePersisted = false
-		log.Printf("failed to update assistant message %s: %v", assistantMsg.ID, err)
+		slog.Default().Error("update_assistant_message_failed", "message_id", assistantMsg.ID, "error", err)
 	}
 	if messagePersisted {
 		r.recordKnowledgeRuntimeObservations(terminalCtx, run.ID, assistantMsg.ID, result.AssistantParts)
 	}
 	if err := r.conversationService.UpdateLastMessageAt(terminalCtx, conversationID, uid); err != nil {
-		log.Printf("failed to update last_message_at for conversation %s: %v", conversationID, err)
+		slog.Default().Error("update_last_message_at_failed", "conversation_id", conversationID, "error", err)
 	}
 
 	if result.ExecutionIdentity.ConfigurationID != "" {
@@ -466,7 +466,7 @@ func (r *Runtime) finishTurn(
 			datatypes.JSON(result.ExecutionIdentity.AgentConfiguration),
 			datatypes.JSON(result.ExecutionIdentity.ExecutionProvenance),
 		); err != nil {
-			log.Printf("failed to persist run %s agent configuration: %v", run.ID, err)
+			slog.Default().Error("persist_run_agent_configuration_failed", "run_id", run.ID, "error", err)
 		}
 	}
 	if r.rolloutService != nil && result.ExecutionIdentity.ConfigurationID != "" {
@@ -479,14 +479,14 @@ func (r *Runtime) finishTurn(
 			ExecutionProvenance:        datatypes.JSON(result.ExecutionIdentity.ExecutionProvenance),
 		}
 		if err := r.rolloutService.ObserveRun(terminalCtx, run, decision); err != nil {
-			log.Printf("failed to record consultation rollout observation for run %s: %v", run.ID, err)
+			slog.Default().Error("record_consultation_rollout_observation_failed", "run_id", run.ID, "error", err)
 		}
 	}
 	r.recordGovernance(terminalCtx, uid, conversationID, run.ID, result.GovernanceResult)
 	r.clearActiveRun(terminalCtx, conversationID, uid)
 	r.refreshThreadProjection(terminalCtx, conversationID, uid)
 	if err := sw.WriteEvent(terminalCtx, runCompletedEvent); err != nil {
-		log.Printf("SSE write error type=run.completed run_id=%s conversation_id=%s seq=%d: %v", run.ID, conversationID, runCompletedEvent.Seq, err)
+		slog.Default().Warn("sse_write_error", "event_type", "run.completed", "run_id", run.ID, "conversation_id", conversationID, "seq", runCompletedEvent.Seq, "error", err)
 	}
 	r.sendNewEvent(
 		terminalCtx, sw, "message", "message.completed",

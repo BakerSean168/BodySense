@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
@@ -139,7 +139,7 @@ func (r *Runtime) streamAIEvents(
 
 			eventCount++
 			if eventCount > maxSSEEvents {
-				log.Printf("event count exceeded limit for conversation %s", state.ConversationID)
+				slog.Default().Warn("event_count_exceeded_limit", "conversation_id", state.ConversationID)
 				r.failActiveStream(ctx, sw, state, "stream exceeded maximum event count")
 				return result, true
 			}
@@ -203,15 +203,12 @@ func (r *Runtime) sendNewEvent(
 ) {
 	event, err := sw.NewEvent(channel, eventType, ids, payload, messageID)
 	if err != nil {
-		log.Printf("SSE build error (%s): %v", label, err)
+		slog.Default().Error("sse_build_error", "label", label, "error", err)
 		return
 	}
 	r.recordPublicEvent(ctx, event)
 	if err := sw.WriteEvent(ctx, event); err != nil {
-		log.Printf(
-			"SSE write error type=%s run_id=%s conversation_id=%s seq=%d: %v",
-			label, event.IDs.RunID, event.IDs.ConversationID, event.Seq, err,
-		)
+		slog.Default().Warn("sse_write_error", "event_type", label, "run_id", event.IDs.RunID, "conversation_id", event.IDs.ConversationID, "seq", event.Seq, "error", err)
 	}
 }
 
@@ -225,10 +222,7 @@ func (r *Runtime) sendEvent(
 	enriched := sw.EnrichEvent(event, messageID)
 	r.recordPublicEvent(ctx, enriched)
 	if err := sw.WriteEvent(ctx, enriched); err != nil {
-		log.Printf(
-			"SSE write error type=%s run_id=%s conversation_id=%s seq=%d: %v",
-			label, enriched.IDs.RunID, enriched.IDs.ConversationID, enriched.Seq, err,
-		)
+		slog.Default().Warn("sse_write_error", "event_type", label, "run_id", enriched.IDs.RunID, "conversation_id", enriched.IDs.ConversationID, "seq", enriched.Seq, "error", err)
 	}
 }
 
@@ -255,6 +249,6 @@ func (r *Runtime) recordPublicEvent(ctx context.Context, event dto.StreamEvent) 
 	}
 
 	if err := r.runtimeEventService.RecordPublicEvent(ctx, conversationID, runID, turnID, event); err != nil {
-		log.Printf("failed to persist runtime event %s for run %s: %v", event.Type, runID, err)
+		slog.Default().Error("persist_runtime_event_failed", "event_type", event.Type, "run_id", runID, "error", err)
 	}
 }

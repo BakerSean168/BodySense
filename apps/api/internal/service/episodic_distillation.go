@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -85,7 +85,7 @@ func NewEpisodicDistillationTriggerFromEnv(
 	t := NewEpisodicDistillationTrigger(repo, writer, proposer, config.Load(getenv).Episodic)
 	requested := EpisodicShadowGenerationEnabledFromEnv(getenv)
 	if requested && (proposer == nil || writer == nil) {
-		log.Printf("episodic shadow generation requested but no approved proposer is wired; generation stays off")
+		slog.Default().Warn("episodic_shadow_generation_no_proposer_wired")
 	}
 	t.enabled = requested && proposer != nil && writer != nil && repo != nil
 	return t
@@ -114,7 +114,7 @@ func (t *EpisodicDistillationTrigger) BeforePrune(
 	}
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			log.Printf("episodic distillation recovered from panic for conversation %s", plan.ConversationID)
+			slog.Default().Error("episodic_distillation_panic_recovered", "conversation_id", plan.ConversationID)
 		}
 	}()
 	ctx, cancel := context.WithTimeout(ctx, t.passBudget)
@@ -122,7 +122,7 @@ func (t *EpisodicDistillationTrigger) BeforePrune(
 
 	state, err := t.repo.State(ctx, owner)
 	if err != nil {
-		log.Printf("episodic distillation state for conversation %s: %v", plan.ConversationID, err)
+		slog.Default().Error("episodic_distillation_state_failed", "conversation_id", plan.ConversationID, "error", err)
 		return stats
 	}
 	if state.ConversationID != plan.ConversationID {
@@ -130,14 +130,14 @@ func (t *EpisodicDistillationTrigger) BeforePrune(
 	}
 	if state.DistilledThroughSeq < state.PrunedThroughSeq {
 		if _, err := t.repo.HealAfterPrune(ctx, owner, state.ConversationID); err != nil {
-			log.Printf("episodic distillation heal for conversation %s: %v", plan.ConversationID, err)
+			slog.Default().Error("episodic_distillation_heal_failed", "conversation_id", plan.ConversationID, "error", err)
 			return stats
 		}
 		state.DistilledThroughSeq = state.PrunedThroughSeq
 	}
 	segments, err := t.repo.Segments(ctx, owner, state.ConversationID, state.DistilledThroughSeq, plan.TargetSeq)
 	if err != nil {
-		log.Printf("episodic distillation segments for conversation %s: %v", plan.ConversationID, err)
+		slog.Default().Error("episodic_distillation_segments_failed", "conversation_id", plan.ConversationID, "error", err)
 		return stats
 	}
 	if len(segments) == 0 {
@@ -147,7 +147,7 @@ func (t *EpisodicDistillationTrigger) BeforePrune(
 	if err := t.repo.RecordPlan(ctx, owner, state.ConversationID, segments); err != nil {
 		// Without a durable plan a crash could lose the gap record. Prune
 		// still proceeds; HealAfterPrune writes the coarse fallback gap.
-		log.Printf("episodic distillation plan for conversation %s: %v", plan.ConversationID, err)
+		slog.Default().Error("episodic_distillation_plan_failed", "conversation_id", plan.ConversationID, "error", err)
 		return stats
 	}
 
@@ -182,7 +182,7 @@ func (t *EpisodicDistillationTrigger) BeforePrune(
 		case seg.Attempts >= t.maxAttempts:
 			if err := t.repo.RecordResolved(ctx, owner, state.ConversationID, seg.FromSeq, seg.ToSeq,
 				repository.EpisodicDistillationGapped, "retry_limit", nil); err != nil {
-				log.Printf("episodic distillation retry-limit for conversation %s: %v", plan.ConversationID, err)
+				slog.Default().Error("episodic_distillation_retry_limit_failed", "conversation_id", plan.ConversationID, "error", err)
 				blocked = true
 				continue
 			}
@@ -197,7 +197,7 @@ func (t *EpisodicDistillationTrigger) BeforePrune(
 			// model again. Record the bounded gap instead of dropping it.
 			if err := t.repo.RecordResolved(ctx, owner, state.ConversationID, seg.FromSeq, seg.ToSeq,
 				repository.EpisodicDistillationGapped, "pass_budget", nil); err != nil {
-				log.Printf("episodic distillation pass-budget for conversation %s: %v", plan.ConversationID, err)
+				slog.Default().Error("episodic_distillation_pass_budget_failed", "conversation_id", plan.ConversationID, "error", err)
 				blocked = true
 				continue
 			}
@@ -237,7 +237,7 @@ func (t *EpisodicDistillationTrigger) BeforePrune(
 				}
 				if err := t.repo.RecordResolved(ctx, owner, state.ConversationID, seg.FromSeq, seg.ToSeq,
 					status, reason, nil); err != nil {
-					log.Printf("episodic distillation terminal outcome for conversation %s: %v", plan.ConversationID, err)
+					slog.Default().Error("episodic_distillation_terminal_outcome_failed", "conversation_id", plan.ConversationID, "error", err)
 					blocked = true
 					continue
 				}
@@ -260,7 +260,7 @@ func (t *EpisodicDistillationTrigger) BeforePrune(
 			// Abstention is a final, empty outcome: no note and no retry.
 			if err := t.repo.RecordResolved(ctx, owner, state.ConversationID, seg.FromSeq, seg.ToSeq,
 				repository.EpisodicDistillationDistilled, "abstained", nil); err != nil {
-				log.Printf("episodic distillation abstention for conversation %s: %v", plan.ConversationID, err)
+				slog.Default().Error("episodic_distillation_abstention_failed", "conversation_id", plan.ConversationID, "error", err)
 				blocked = true
 				continue
 			}
@@ -277,7 +277,7 @@ func (t *EpisodicDistillationTrigger) BeforePrune(
 		}
 		if err := t.repo.RecordResolved(ctx, owner, state.ConversationID, seg.FromSeq, seg.ToSeq,
 			repository.EpisodicDistillationDistilled, reason, noteID); err != nil {
-			log.Printf("episodic distillation persist for conversation %s: %v", plan.ConversationID, err)
+			slog.Default().Error("episodic_distillation_persist_failed", "conversation_id", plan.ConversationID, "error", err)
 			blocked = true
 			continue
 		}
@@ -288,7 +288,7 @@ func (t *EpisodicDistillationTrigger) BeforePrune(
 	}
 	if resolvedThrough > state.DistilledThroughSeq {
 		if err := t.repo.AdvanceWaterline(ctx, owner, state.ConversationID, resolvedThrough); err != nil {
-			log.Printf("episodic distillation watermark for conversation %s: %v", plan.ConversationID, err)
+			slog.Default().Error("episodic_distillation_watermark_failed", "conversation_id", plan.ConversationID, "error", err)
 		}
 	}
 	return stats
@@ -303,7 +303,7 @@ func (t *EpisodicDistillationTrigger) recordFailure(
 	status, _, err := t.repo.RecordFailure(ctx, owner, conversationID,
 		seg.FromSeq, seg.ToSeq, reason, t.maxAttempts)
 	if err != nil {
-		log.Printf("episodic distillation failure record for conversation %s: %v", plan.ConversationID, err)
+		slog.Default().Error("episodic_distillation_failure_record_failed", "conversation_id", plan.ConversationID, "error", err)
 		*blocked = true
 		return false
 	}
@@ -347,10 +347,10 @@ func (t *EpisodicDistillationTrigger) AfterPrune(
 	defer cancel()
 	gaps, err := t.repo.HealAfterPrune(ctx, owner, plan.ConversationID)
 	if err != nil {
-		log.Printf("episodic distillation after-prune for conversation %s: %v", plan.ConversationID, err)
+		slog.Default().Error("episodic_distillation_after_prune_failed", "conversation_id", plan.ConversationID, "error", err)
 		return
 	}
 	if gaps > 0 {
-		log.Printf("episodic distillation recorded %d pruned gap(s) for conversation %s", gaps, plan.ConversationID)
+		slog.Default().Info("episodic_distillation_pruned_gaps_recorded", "gaps", gaps, "conversation_id", plan.ConversationID)
 	}
 }
