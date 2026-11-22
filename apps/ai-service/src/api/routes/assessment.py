@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from ...services.assessment_service import AssessmentService, get_assessment_service
+from ...settings import e2e_stub_ai_enabled
 from ...testing_support.deterministic_ai import deterministic_assessment_model
 
 logger = logging.getLogger(__name__)
@@ -32,9 +32,7 @@ class AssessmentRequest(BaseModel):
 @router.post("/generate")
 async def generate_assessment(request: AssessmentRequest):
     try:
-        if os.getenv("BODYSENSE_E2E_STUB_AI") == "1" and os.getenv(
-            "ENVIRONMENT", "development"
-        ).lower() in {"development", "test", "e2e"}:
+        if e2e_stub_ai_enabled():
             # E2E remains deterministic but still executes the same evidence
             # catalog, typed contract and governance path as production.
             service = AssessmentService(
