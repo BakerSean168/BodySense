@@ -140,7 +140,7 @@ func (s *AssessmentReplayService) HistoricalReplay(
 	return buildAssessmentReplayReport(
 		"historical", report, input, report.AgentConfigurationID,
 		baseline, recomputed, replayRaw,
-	), nil
+	)
 }
 
 // CounterfactualReplay sends the exact frozen input to another immutable
@@ -225,7 +225,7 @@ func (s *AssessmentReplayService) CounterfactualReplay(
 	return buildAssessmentReplayReport(
 		"counterfactual", report, input, targetConfigurationID,
 		baseline, replayed, result,
-	), nil
+	)
 }
 
 func (s *AssessmentReplayService) ExportRegressionCase(
@@ -404,9 +404,14 @@ func assessmentReplayArtifactIntegrity(
 	report *model.AssessmentReport,
 	input AssessmentReplayInput,
 	baseline map[string]any,
-) AssessmentReplayLayer {
+) (AssessmentReplayLayer, error) {
 	recomputedFingerprint := assessmentReplayInputFingerprint(input)
-	storedFingerprint := storedReplayInputFingerprint(json.RawMessage(report.GenerationDecisionTrace))
+	// A corrupt generation trace must surface as a replay error, not masquerade
+	// as an ordinary fingerprint mismatch inside the integrity layer.
+	storedFingerprint, err := storedReplayInputFingerprint(json.RawMessage(report.GenerationDecisionTrace))
+	if err != nil {
+		return AssessmentReplayLayer{}, fmt.Errorf("assessment replay integrity: report %s: %w", report.ID, err)
+	}
 	checks := []AssessmentReplayCheck{
 		{
 			Name:      "source_configuration_id_matches_replay_envelope",
@@ -427,7 +432,7 @@ func assessmentReplayArtifactIntegrity(
 	for i := range checks {
 		all = all && checks[i].Match
 	}
-	return AssessmentReplayLayer{Match: all, Checks: checks}
+	return AssessmentReplayLayer{Match: all, Checks: checks}, nil
 }
 
 func buildAssessmentReplayReport(
@@ -438,19 +443,23 @@ func buildAssessmentReplayReport(
 	baseline map[string]any,
 	replayed map[string]any,
 	replayRaw json.RawMessage,
-) *AssessmentReplayReport {
+) (*AssessmentReplayReport, error) {
+	integrity, err := assessmentReplayArtifactIntegrity(report, input, baseline)
+	if err != nil {
+		return nil, err
+	}
 	return &AssessmentReplayReport{
 		Mode:                  mode,
 		SourceReportID:        report.ID,
 		SourceConfigurationID: report.AgentConfigurationID,
 		TargetConfigurationID: targetConfigurationID,
 		InputFingerprint:      assessmentReplayInputFingerprint(input),
-		ArtifactIntegrity:     assessmentReplayArtifactIntegrity(report, input, baseline),
+		ArtifactIntegrity:     integrity,
 		Baseline:              assessmentReplaySnapshot(baseline),
 		Replay:                assessmentReplaySnapshot(replayed),
 		Comparison:            compareAssessmentReplayOutputs(baseline, replayed),
 		Output:                replayRaw,
-	}
+	}, nil
 }
 
 func assessmentReplayInputFingerprint(input AssessmentReplayInput) string {
@@ -466,12 +475,14 @@ func assessmentReplayInputFingerprintOfRaw(raw json.RawMessage) string {
 
 // storedReplayInputFingerprint reads the fingerprint frozen at generation time
 // from the report's generation decision trace.
-func storedReplayInputFingerprint(trace json.RawMessage) string {
+func storedReplayInputFingerprint(trace json.RawMessage) (string, error) {
 	var payload struct {
 		ReplayInputFingerprint string `json:"replay_input_fingerprint"`
 	}
-	_ = json.Unmarshal(trace, &payload)
-	return payload.ReplayInputFingerprint
+	if err := json.Unmarshal(trace, &payload); err != nil {
+		return "", fmt.Errorf("decode generation decision trace: %w", err)
+	}
+	return payload.ReplayInputFingerprint, nil
 }
 
 func assessmentReplayConfigurationMatches(payload map[string]any, expectedID string) bool {
