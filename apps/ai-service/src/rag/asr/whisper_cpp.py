@@ -48,7 +48,7 @@ class WhisperCppProvider(ASRProvider):
         model_name: str | None = None,
     ):
         self.data_root = Path(data_root or _default_data_root())
-        self.model_name = model_name or asr_whisper_model()
+        self.model_name: str = model_name or asr_whisper_model()
         self._whisper_root = self.data_root / ".cache" / "whisper"
 
     async def transcribe(
