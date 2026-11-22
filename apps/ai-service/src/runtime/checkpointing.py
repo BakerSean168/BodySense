@@ -14,6 +14,8 @@ from psycopg import AsyncConnection
 from psycopg.rows import DictRow, dict_row
 from psycopg_pool import AsyncConnectionPool
 
+from ..settings import build_database_url
+
 logger = logging.getLogger(__name__)
 
 # Opt-in switch for running without a durable checkpointer.
@@ -49,16 +51,9 @@ def _ephemeral_fallback_allowed() -> bool:
 
 
 def _build_database_url() -> str:
-    env_url = os.getenv("LANGGRAPH_CHECKPOINTER_URL") or os.getenv("DATABASE_URL")
-    if env_url:
-        return env_url.replace("+asyncpg", "").replace("+psycopg", "")
-
-    host = os.getenv("DB_HOST", "127.0.0.1")
-    port = os.getenv("DB_PORT", "5432")
-    name = os.getenv("DB_NAME", "bodysense")
-    user = os.getenv("DB_USER", "bodysense")
-    password = os.getenv("DB_PASSWORD", "bodysense123")
-    return f"postgresql://{user}:{password}@{host}:{port}/{name}"
+    return build_database_url(
+        url_overrides=("LANGGRAPH_CHECKPOINTER_URL", "DATABASE_URL"),
+    )
 
 
 async def initialize_runtime_checkpointer() -> Any:
