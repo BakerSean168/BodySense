@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 
@@ -327,7 +328,16 @@ func assessmentReplayBaseline(report *model.AssessmentReport) (map[string]any, e
 	baseline["information_gaps"] = gaps
 	var safety []any
 	if len(report.SafetyNotes) > 0 {
-		_ = json.Unmarshal(report.SafetyNotes, &safety)
+		// Safety notes are informational only: no replay check consumes them,
+		// so a corrupt column degrades the snapshot instead of the verdict.
+		if err := json.Unmarshal(report.SafetyNotes, &safety); err != nil {
+			slog.Warn(
+				"assessment replay baseline: corrupt safety_notes JSON, defaulting to empty",
+				slog.String("report_id", report.ID.String()),
+				slog.String("field", "safety_notes"),
+				"error", err,
+			)
+		}
 	}
 	baseline["safety_notes"] = safety
 	baseline["agent_configuration"] = map[string]any{"id": report.AgentConfigurationID, "role": "assessment"}
