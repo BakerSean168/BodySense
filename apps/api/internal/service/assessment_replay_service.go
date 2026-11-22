@@ -130,7 +130,10 @@ func (s *AssessmentReplayService) HistoricalReplay(
 	if err != nil {
 		return nil, err
 	}
-	baseline := assessmentReplayBaseline(report)
+	baseline, err := assessmentReplayBaseline(report)
+	if err != nil {
+		return nil, err
+	}
 	recomputed := cloneAssessmentPayload(baseline)
 	replayRaw, _ := json.Marshal(recomputed)
 	return buildAssessmentReplayReport(
@@ -214,7 +217,10 @@ func (s *AssessmentReplayService) CounterfactualReplay(
 	replayed["evidence_gaps"] = projection.Gaps
 	replayed["summary"] = projection.Summary
 	result, _ = json.Marshal(replayed)
-	baseline := assessmentReplayBaseline(report)
+	baseline, err := assessmentReplayBaseline(report)
+	if err != nil {
+		return nil, err
+	}
 	return buildAssessmentReplayReport(
 		"counterfactual", report, input, targetConfigurationID,
 		baseline, replayed, result,
@@ -240,7 +246,11 @@ func (s *AssessmentReplayService) ExportRegressionCase(
 	if err != nil {
 		return nil, err
 	}
-	snapshot := assessmentReplaySnapshot(assessmentReplayBaseline(report))
+	baseline, err := assessmentReplayBaseline(report)
+	if err != nil {
+		return nil, err
+	}
+	snapshot := assessmentReplaySnapshot(baseline)
 	executed := replayAgentExecuted(json.RawMessage(report.ExecutionProvenance))
 	caseName := "historical-" + strings.ReplaceAll(report.ID.String()[:13], "-", "")
 	return map[string]any{
@@ -278,7 +288,7 @@ func assessmentRegressionForbiddenFields(_ string) []string {
 	return []string{"treatment", "training_plan", "prescription", "health_grade", "dimension_scores"}
 }
 
-func assessmentReplayBaseline(report *model.AssessmentReport) map[string]any {
+func assessmentReplayBaseline(report *model.AssessmentReport) (map[string]any, error) {
 	baseline := map[string]any{
 		"contract_revision": assessmentOutputContractV2,
 		"status":            string(report.Status),
@@ -298,7 +308,12 @@ func assessmentReplayBaseline(report *model.AssessmentReport) map[string]any {
 	}
 	var obs []any
 	if len(report.Observations) > 0 {
-		_ = json.Unmarshal(report.Observations, &obs)
+		if err := json.Unmarshal(report.Observations, &obs); err != nil {
+			// Observations drive the hard observation_count check and the
+			// exported expected_observations baseline; silently degrading to
+			// empty would make a corrupted report replay as a match.
+			return nil, fmt.Errorf("assessment replay baseline: report %s observations: %w", report.ID, err)
+		}
 		baseline["observations"] = obs
 	}
 	var gaps []any
@@ -312,7 +327,7 @@ func assessmentReplayBaseline(report *model.AssessmentReport) map[string]any {
 	}
 	baseline["safety_notes"] = safety
 	baseline["agent_configuration"] = map[string]any{"id": report.AgentConfigurationID, "role": "assessment"}
-	return baseline
+	return baseline, nil
 }
 
 func assessmentReplaySnapshot(payload map[string]any) AssessmentReplaySnapshot {
