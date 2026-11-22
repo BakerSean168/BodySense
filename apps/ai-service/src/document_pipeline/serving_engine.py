@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import gc
 import hashlib
-import os
 from dataclasses import dataclass
 from functools import lru_cache
 from importlib import metadata
@@ -25,6 +24,7 @@ from ..configuration.health_document_config import (
 )
 from ..models.ocr import DocumentPageEvidence, DocumentSourceBlock
 from ..services.report_indicator_admissibility import admissibility_policy_source_sha256
+from ..settings import health_document_model_root
 from .strategy import evaluate_native_text_quality, native_text_quality_policy_fingerprint
 from .structured_indicator_parser import SourceTextBlock, parser_source_sha256
 from .verification import verification_policy_sha256
@@ -67,7 +67,7 @@ def _assert_equal(label: str, actual: str, expected: str) -> None:
 
 
 def model_root() -> Path:
-    return Path(os.getenv(MODEL_ROOT_ENV, str(DEFAULT_MODEL_ROOT))).expanduser().resolve()
+    return Path(health_document_model_root(str(DEFAULT_MODEL_ROOT))).expanduser().resolve()
 
 
 def verify_health_document_runtime(

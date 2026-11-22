@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
 import shutil
 import subprocess
 from importlib import metadata
 from pathlib import Path
 
+from ..settings import tessdata_prefix
 from .contracts import BenchmarkCandidateConfig
 
 SERVICE_ROOT = Path(__file__).resolve().parents[2]
@@ -72,7 +72,7 @@ def _tessdata_dir() -> Path:
     match = re.search(r'List of available languages in "([^"]+)"', combined)
     if match is not None:
         return Path(match.group(1))
-    prefix = os.getenv("TESSDATA_PREFIX", "").strip()
+    prefix = tessdata_prefix()
     if prefix:
         return Path(prefix)
     raise CandidateIdentityMismatchError("unable to resolve Tesseract tessdata directory")

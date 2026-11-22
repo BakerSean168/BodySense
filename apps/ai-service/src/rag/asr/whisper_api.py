@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
+from ...settings import (
+    asr_api_key,
+    asr_transcription_base_url,
+    asr_transcription_model,
+)
 from ..knowledge_pack import TranscriptSegment
 from .base import ASRProvider
 
-# Environment variables for API configuration
+# Environment variable names, kept for error messages
 _ENV_API_KEY = "ASR_API_KEY"
-_ENV_BASE_URL = "ASR_API_BASE_URL"
-_ENV_MODEL = "ASR_API_MODEL"
 
 
 class ASRAPIProvider(ASRProvider):
@@ -35,9 +37,9 @@ class ASRAPIProvider(ASRProvider):
         base_url: str | None = None,
         model: str | None = None,
     ):
-        self.api_key = api_key or os.getenv(_ENV_API_KEY) or os.getenv("OPENAI_API_KEY")
-        self.base_url = base_url or os.getenv(_ENV_BASE_URL)
-        self.model = model or os.getenv(_ENV_MODEL, "mimo-v2.5-asr")
+        self.api_key = api_key or asr_api_key()
+        self.base_url = base_url or asr_transcription_base_url()
+        self.model = model or asr_transcription_model()
 
         if not self.api_key:
             raise ValueError(f"{_ENV_API_KEY} or OPENAI_API_KEY is required for asr_api provider")

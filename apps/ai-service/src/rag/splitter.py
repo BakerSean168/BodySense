@@ -10,11 +10,11 @@ Select via ``SPLITTER_PROVIDER`` env var: ``heuristic`` | ``llm``.
 
 from __future__ import annotations
 
-import os
 import re
 from collections import Counter
 from typing import Protocol
 
+from ..settings import splitter_provider
 from .knowledge_pack import (
     KnowledgeUnitCandidate,
     TranscriptSegment,
@@ -53,7 +53,7 @@ def get_splitter(provider: str | None = None, configuration_id: str | None = Non
 
     Priority: explicit ``provider`` argument > ``SPLITTER_PROVIDER`` env var > ``heuristic``.
     """
-    name = (provider or os.getenv("SPLITTER_PROVIDER", "heuristic")).strip().lower()
+    name = (provider or splitter_provider()).strip().lower()
 
     if name == "heuristic":
         return HeuristicSplitter()

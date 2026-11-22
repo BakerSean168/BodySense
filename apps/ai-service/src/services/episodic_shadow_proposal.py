@@ -10,7 +10,6 @@ by Go behind its default-off switch.
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
@@ -18,6 +17,8 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.models import Model
+
+from .. import settings
 
 POLICY_REVISION = "episodic-shadow-quote-v1"
 SOURCE_MAX_CHARS = 8192
@@ -36,16 +37,7 @@ def episodic_proposal_max_tokens() -> int:
     override lets a deployment tune the cap without a code change; unset,
     non-numeric, zero or negative values keep the safe default.
     """
-    raw = os.getenv(EPISODIC_PROPOSAL_MAX_TOKENS_ENV, "").strip()
-    if raw == "":
-        return DEFAULT_EPISODIC_PROPOSAL_MAX_TOKENS
-    try:
-        max_tokens = int(raw)
-    except ValueError:
-        return DEFAULT_EPISODIC_PROPOSAL_MAX_TOKENS
-    if max_tokens <= 0:
-        return DEFAULT_EPISODIC_PROPOSAL_MAX_TOKENS
-    return max_tokens
+    return settings.episodic_proposal_max_tokens()
 
 
 # Exact whole-message allowlist. No substring, health statement, free summary

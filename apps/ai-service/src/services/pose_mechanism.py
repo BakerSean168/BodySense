@@ -13,12 +13,12 @@ Design:
 from __future__ import annotations
 
 import hashlib
-import os
 from importlib import metadata
 from pathlib import Path
 from typing import Any
 
 from ..configuration.posture_agent_config import PostureGeometryMechanismConfig
+from ..settings import pose_model_path_override
 from .pose_geometry import (
     POSE_GEOMETRY_THRESHOLD_SPEC,
     Landmark,
@@ -46,7 +46,7 @@ _landmarker_provenance: dict[str, str] | None = None
 
 
 def default_pose_model_path(mechanism: PostureGeometryMechanismConfig) -> Path:
-    override = os.getenv(_POSE_MODEL_PATH_ENV, "").strip()
+    override = pose_model_path_override()
     if override:
         return Path(override)
     return (

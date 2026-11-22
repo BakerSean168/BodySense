@@ -10,22 +10,20 @@ from __future__ import annotations
 import base64
 import json
 import logging
-import os
 import subprocess
 import tempfile
 from pathlib import Path
 
 import httpx
 
+from ...settings import asr_api_key, asr_omni_base_url, asr_omni_model
 from ..knowledge_pack import TranscriptSegment
 from .base import ASRProvider, ASRTranscriptionError
 
 logger = logging.getLogger(__name__)
 
-# Environment variables
+# Environment variable name, kept for error messages
 _ENV_API_KEY = "ASR_API_KEY"
-_ENV_BASE_URL = "ASR_API_BASE_URL"
-_ENV_MODEL = "ASR_API_MODEL"
 
 # Chunk duration in seconds
 _CHUNK_DURATION_SEC = 30
@@ -46,11 +44,9 @@ class MiMoOmniASRProvider(ASRProvider):
         base_url: str | None = None,
         model: str | None = None,
     ):
-        self.api_key = api_key or os.getenv(_ENV_API_KEY) or os.getenv("OPENAI_API_KEY")
-        self.base_url = base_url or os.getenv(
-            _ENV_BASE_URL, "https://token-plan-cn.xiaomimimo.com/v1"
-        )
-        self.model = model or os.getenv(_ENV_MODEL, "mimo-v2.5")
+        self.api_key = api_key or asr_api_key()
+        self.base_url = base_url or asr_omni_base_url()
+        self.model = model or asr_omni_model()
 
         if not self.api_key:
             raise ValueError(f"{_ENV_API_KEY} is required for mimo_omni provider")

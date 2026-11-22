@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -14,7 +13,7 @@ from psycopg import AsyncConnection
 from psycopg.rows import DictRow, dict_row
 from psycopg_pool import AsyncConnectionPool
 
-from ..settings import build_database_url
+from ..settings import build_database_url, ephemeral_checkpointer_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -43,11 +42,7 @@ class CheckpointerUnavailableError(RuntimeError):
 
 
 def _ephemeral_fallback_allowed() -> bool:
-    return os.getenv(EPHEMERAL_CHECKPOINTER_ENV, "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-    }
+    return ephemeral_checkpointer_allowed()
 
 
 def _build_database_url() -> str:

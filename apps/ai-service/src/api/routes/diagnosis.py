@@ -1,7 +1,6 @@
 """BodyState Diagnosis HTTP route."""
 
 import logging
-import os
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -13,6 +12,7 @@ from ...models.evidence import EvidenceAcquisitionTrace, EvidenceBudget, Externa
 from ...models.safety import SafetyEnvelopeV2
 from ...services.diagnosis_formal_proposals import build_formal_proposals
 from ...services.diagnosis_service import get_diagnosis_service
+from ...settings import e2e_stub_ai_enabled
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/diagnosis", tags=["diagnosis"])
@@ -34,9 +34,7 @@ class DiagnosisRequest(BaseModel):
 
 @router.post("/analyze")
 async def analyze_diagnosis(request: DiagnosisRequest):
-    if os.getenv("BODYSENSE_E2E_STUB_AI") == "1" and os.getenv(
-        "ENVIRONMENT", "development"
-    ).lower() in {"development", "test", "e2e"}:
+    if e2e_stub_ai_enabled():
         config = get_diagnosis_configuration(request.configuration_id)
         evidence_trace = EvidenceAcquisitionTrace(
             policy_revision=config.evidence_policy_revision,

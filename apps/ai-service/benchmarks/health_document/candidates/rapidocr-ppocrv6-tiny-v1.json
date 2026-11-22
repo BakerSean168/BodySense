@@ -55,7 +55,7 @@
     "image_format": "png"
   },
   "source_contract": {
-    "engine_adapter_sha256": "8a9997b2fd7d97fd35406e79a9d39bd739b105c832c2e58aab0d48a770858f06",
+    "engine_adapter_sha256": "29706c931e21e79f03f0465653b5b1b9cfb2a8d9a28e0c4d3cb9d47df54cb679",
     "indicator_extractor_sha256": "22d6e1c8689557c8b5a878004a647b428950b47c44602c958ce1cb54e383eec7",
     "admissibility_policy_sha256": "74926abcac70a326e254702774c18f0a03f3d5c567cb3a51aafb4b4da2757c78"
   }

@@ -3,10 +3,19 @@
 import asyncio
 import hashlib
 import math
-import os
 from typing import Optional
 
 from openai import AsyncOpenAI
+
+from ..settings import (
+    embedding_api_key,
+    embedding_base_url,
+    embedding_dimensions,
+    embedding_model,
+    embedding_provider,
+    embedding_revision,
+    local_embedding_max_concurrency,
+)
 
 HASHING_EMBEDDING_MODEL = "bodysense-hashing-ngram"
 HASHING_EMBEDDING_REVISION = "sha256-char-word-ngram-v1"
@@ -22,17 +31,15 @@ class EmbeddingGenerator:
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
     ):
-        self.provider = os.getenv("EMBEDDING_PROVIDER", "hashing")
-        self.model = model or os.getenv("EMBEDDING_MODEL", "paraphrase-multilingual-MiniLM-L12-v2")
-        self.dimension = int(os.getenv("EMBEDDING_DIMENSIONS", str(dimension)))
-        self.api_key = api_key or os.getenv("EMBEDDING_API_KEY") or os.getenv("OPENAI_API_KEY")
-        self.base_url = base_url or os.getenv("EMBEDDING_BASE_URL")
+        self.provider = embedding_provider()
+        self.model = model or embedding_model()
+        self.dimension = embedding_dimensions(dimension)
+        self.api_key = api_key or embedding_api_key()
+        self.base_url = base_url or embedding_base_url()
         self._client: Optional[AsyncOpenAI] = None
         self._local_model = None
         self._local_model_lock = asyncio.Lock()
-        self._local_encode_limit = asyncio.Semaphore(
-            max(1, int(os.getenv("LOCAL_EMBEDDING_MAX_CONCURRENCY", "2")))
-        )
+        self._local_encode_limit = asyncio.Semaphore(local_embedding_max_concurrency())
 
     def _load_local_model_sync(self):
         """Load SentenceTransformer on a worker thread, never the event loop."""
@@ -109,7 +116,7 @@ class EmbeddingGenerator:
             revision = HASHING_EMBEDDING_REVISION
         else:
             model = str(self.model or "").strip()
-            revision = os.getenv("EMBEDDING_REVISION", "").strip() or model
+            revision = embedding_revision() or model
         if not provider or not model or not revision or self.dimension <= 0:
             raise ValueError("embedding identity is incomplete")
         identity_text = f"{provider}\n{model}\n{self.dimension}\n{revision}"

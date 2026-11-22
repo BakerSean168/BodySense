@@ -12,7 +12,6 @@ from __future__ import annotations
 import gc
 import hashlib
 import json
-import os
 import time
 from functools import lru_cache
 from importlib import metadata
@@ -22,6 +21,7 @@ from typing import Any
 import fitz
 
 from ...services.indicator_extractor import extract_indicators
+from ...settings import health_document_model_root
 from ..baseline import CandidateIdentityMismatchError, CandidateUnavailableError, sha256_file
 from ..contracts import (
     BenchmarkCandidateConfig,
@@ -74,7 +74,7 @@ def load_rapidocr_tiny_config() -> BenchmarkCandidateConfig:
 
 
 def _model_root() -> Path:
-    return Path(os.getenv(MODEL_ROOT_ENV, str(DEFAULT_MODEL_ROOT))).resolve()
+    return Path(health_document_model_root(str(DEFAULT_MODEL_ROOT))).resolve()
 
 
 def verify_rapidocr_tiny_runtime(

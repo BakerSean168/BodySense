@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
+from ...settings import asr_provider
 from .base import ASRProvider
 
 
@@ -24,7 +24,7 @@ def get_asr_provider(
     Returns:
         An ASRProvider instance ready for transcription.
     """
-    name = (provider or os.getenv("ASR_PROVIDER", "whisper.cpp")).strip().lower()
+    name = (provider or asr_provider()).strip().lower()
 
     if name == "whisper.cpp":
         from .whisper_cpp import WhisperCppProvider
