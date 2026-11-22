@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from contextlib import asynccontextmanager
 from typing import AsyncIterator, Optional
 
@@ -13,7 +12,7 @@ from psycopg import AsyncConnection
 from psycopg.rows import TupleRow
 from psycopg_pool import AsyncConnectionPool
 
-from ..settings import build_database_url
+from ..settings import build_database_url, knowledge_pool_max_size, knowledge_pool_min_size
 from .embedding import EmbeddingGenerator, get_embedding_generator
 from .knowledge_library_admin import KnowledgeAdminMixin
 from .knowledge_library_base import (
@@ -79,8 +78,8 @@ class KnowledgeLibrary(KnowledgeSearchMixin, KnowledgeIngestMixin, KnowledgeAdmi
                 return self
             pool: AsyncConnectionPool[AsyncConnection[TupleRow]] = AsyncConnectionPool(
                 self.database_url,
-                min_size=int(os.getenv("KNOWLEDGE_POOL_MIN_SIZE", str(KNOWLEDGE_POOL_MIN_SIZE))),
-                max_size=int(os.getenv("KNOWLEDGE_POOL_MAX_SIZE", str(KNOWLEDGE_POOL_MAX_SIZE))),
+                min_size=knowledge_pool_min_size(),
+                max_size=knowledge_pool_max_size(),
                 open=False,
                 configure=_configure_vector_connection,
             )
