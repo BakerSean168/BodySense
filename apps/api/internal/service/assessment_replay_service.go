@@ -318,7 +318,11 @@ func assessmentReplayBaseline(report *model.AssessmentReport) (map[string]any, e
 	}
 	var gaps []any
 	if len(report.InformationGaps) > 0 {
-		_ = json.Unmarshal(report.InformationGaps, &gaps)
+		if err := json.Unmarshal(report.InformationGaps, &gaps); err != nil {
+			// Information gaps feed the semantic information_gaps comparison;
+			// degrading to empty would mask real gaps behind a corrupted column.
+			return nil, fmt.Errorf("assessment replay baseline: report %s information_gaps: %w", report.ID, err)
+		}
 	}
 	baseline["information_gaps"] = gaps
 	var safety []any
