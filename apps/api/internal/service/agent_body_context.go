@@ -221,9 +221,33 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 		UserHypotheses: []AgentUserHypothesis{}, Equipment: []AgentEquipmentItem{},
 	}
 
-	// Facts: every asserted statement, newest first. Keyed context (injury
-	// summary, lifestyle sections) keeps only its newest statement. Safety
-	// coverage reads every asserted symptom, not only those that fit the cap.
+	symptoms, allFactsRead, err := s.loadAgentBodyFacts(ctx, owner, view, pinned)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.loadAgentBodyObservations(ctx, owner, view, pinned); err != nil {
+		return nil, err
+	}
+	if err := s.loadAgentBodyEpisodes(ctx, owner, view, pinned); err != nil {
+		return nil, err
+	}
+	if err := s.loadAgentBodyHypotheses(ctx, owner, view, pinned); err != nil {
+		return nil, err
+	}
+	if err := s.loadAgentSafetyProjection(ctx, owner, view, revision, symptoms, allFactsRead); err != nil {
+		return nil, err
+	}
+	if err := s.loadAgentBodyEquipment(ctx, owner, view, now); err != nil {
+		return nil, err
+	}
+	return view, nil
+}
+
+// loadAgentBodyFacts pages every asserted statement, newest first. Keyed
+// context (injury summary, lifestyle sections) keeps only its newest
+// statement. It also collects the safety coverage subjects: coverage reads
+// every asserted symptom, not only those that fit the cap.
+func (s *BodyStateService) loadAgentBodyFacts(ctx context.Context, owner uuid.UUID, view *AgentBodyContext, pinned func(uuid.UUID, int64) error) ([]safetyCoverageSubject, bool, error) {
 	var symptoms []safetyCoverageSubject
 	seenKeys := map[string]bool{}
 	allFactsRead := false
@@ -231,15 +255,15 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 	for page := 0; page < agentBodyContextMaxFactPages; page++ {
 		facts, err := s.repo.ListFacts(ctx, owner, before)
 		if err != nil {
-			return nil, fmt.Errorf("list body facts: %w", err)
+			return nil, false, fmt.Errorf("list body facts: %w", err)
 		}
 		if err := pinned(facts.UserID, facts.CurrentRevision); err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		for index := range facts.Facts {
 			fact := facts.Facts[index]
 			if fact.UserID != owner {
-				return nil, fmt.Errorf("body fact owner mismatch")
+				return nil, false, fmt.Errorf("body fact owner mismatch")
 			}
 			if fact.AssertionStatus != "asserted" {
 				continue
@@ -293,20 +317,23 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 	if !allFactsRead {
 		view.Truncated = true
 	}
+	return symptoms, allFactsRead, nil
+}
 
+func (s *BodyStateService) loadAgentBodyObservations(ctx context.Context, owner uuid.UUID, view *AgentBodyContext, pinned func(uuid.UUID, int64) error) error {
 	seenObservationKinds := map[string]bool{}
-	before = 0
+	before := int64(0)
 	for page := 0; page < agentBodyContextMaxFactPages && len(view.Observations) < agentBodyContextMaxObservations; page++ {
 		observations, err := s.repo.ListDirectObservations(ctx, owner, before)
 		if err != nil {
-			return nil, fmt.Errorf("list body observations: %w", err)
+			return fmt.Errorf("list body observations: %w", err)
 		}
 		if err := pinned(observations.UserID, observations.CurrentRevision); err != nil {
-			return nil, err
+			return err
 		}
 		for _, observation := range observations.Observations {
 			if observation.UserID != owner {
-				return nil, fmt.Errorf("body observation owner mismatch")
+				return fmt.Errorf("body observation owner mismatch")
 			}
 			if observation.AssertionStatus != "asserted" || seenObservationKinds[observation.Kind] {
 				continue
@@ -329,17 +356,20 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 		}
 		before = *observations.NextBeforeRevision
 	}
+	return nil
+}
 
+func (s *BodyStateService) loadAgentBodyEpisodes(ctx context.Context, owner uuid.UUID, view *AgentBodyContext, pinned func(uuid.UUID, int64) error) error {
 	episodes, err := s.repo.ListEpisodes(ctx, owner, 0)
 	if err != nil {
-		return nil, fmt.Errorf("list symptom episodes: %w", err)
+		return fmt.Errorf("list symptom episodes: %w", err)
 	}
 	if err := pinned(episodes.UserID, episodes.CurrentRevision); err != nil {
-		return nil, err
+		return err
 	}
 	for _, episode := range episodes.Episodes {
 		if episode.UserID != owner {
-			return nil, fmt.Errorf("body episode owner mismatch")
+			return fmt.Errorf("body episode owner mismatch")
 		}
 		if episode.IdentityStatus != "current" {
 			continue
@@ -361,17 +391,20 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 	if episodes.HasMore {
 		view.Truncated = true
 	}
+	return nil
+}
 
+func (s *BodyStateService) loadAgentBodyHypotheses(ctx context.Context, owner uuid.UUID, view *AgentBodyContext, pinned func(uuid.UUID, int64) error) error {
 	hypotheses, err := s.repo.ListActiveBodyHypotheses(ctx, owner)
 	if err != nil {
-		return nil, fmt.Errorf("list user hypotheses: %w", err)
+		return fmt.Errorf("list user hypotheses: %w", err)
 	}
 	if err := pinned(hypotheses.UserID, hypotheses.CurrentRevision); err != nil {
-		return nil, err
+		return err
 	}
 	for _, hypothesis := range hypotheses.Hypotheses {
 		if hypothesis.UserID != owner {
-			return nil, fmt.Errorf("body hypothesis owner mismatch")
+			return fmt.Errorf("body hypothesis owner mismatch")
 		}
 		if hypothesis.AssertionStatus != "asserted" || hypothesis.Source.Actor != "user" {
 			continue
@@ -393,35 +426,41 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 			RelatedFactIDs: related, RelatedObservationIDs: observations, CreatedRevision: hypothesis.CreatedRevision,
 		})
 	}
+	return nil
+}
 
+func (s *BodyStateService) loadAgentSafetyProjection(ctx context.Context, owner uuid.UUID, view *AgentBodyContext, revision int64, symptoms []safetyCoverageSubject, allFactsRead bool) error {
 	screens, err := s.repo.ListSafetyScreens(ctx, owner)
 	if err != nil {
-		return nil, fmt.Errorf("list safety screens: %w", err)
+		return fmt.Errorf("list safety screens: %w", err)
 	}
 	for _, screen := range screens {
 		if screen.UserID != owner {
-			return nil, fmt.Errorf("safety screen owner mismatch")
+			return fmt.Errorf("safety screen owner mismatch")
 		}
 	}
 	restrictions, err := s.repo.ListSafetyRestrictions(ctx, owner)
 	if err != nil {
-		return nil, fmt.Errorf("read native safety: %w", err)
+		return fmt.Errorf("read native safety: %w", err)
 	}
 	if restrictions == nil || restrictions.UserID != owner || restrictions.CurrentRevision != revision {
-		return nil, errAgentBodyContextNotPinned
+		return errAgentBodyContextNotPinned
 	}
 	applyAgentSafety(view, safetyProjectionInput{
 		UserID: owner, CurrentRevision: revision, Restrictions: restrictions.Restrictions, Symptoms: symptoms, Screens: screens,
 	}, allFactsRead)
+	return nil
+}
 
+func (s *BodyStateService) loadAgentBodyEquipment(ctx context.Context, owner uuid.UUID, view *AgentBodyContext, now time.Time) error {
 	if s.equipment != nil {
 		assets, err := s.equipment.ListUsable(ctx, owner, now)
 		if err != nil {
-			return nil, fmt.Errorf("list usable equipment: %w", err)
+			return fmt.Errorf("list usable equipment: %w", err)
 		}
 		for _, asset := range assets {
 			if asset.UserID != owner {
-				return nil, fmt.Errorf("equipment owner mismatch")
+				return fmt.Errorf("equipment owner mismatch")
 			}
 			if len(view.Equipment) >= agentBodyContextMaxEquipment {
 				view.Truncated = true
@@ -432,5 +471,5 @@ func (s *BodyStateService) loadAgentBodyContext(ctx context.Context, owner uuid.
 			})
 		}
 	}
-	return view, nil
+	return nil
 }

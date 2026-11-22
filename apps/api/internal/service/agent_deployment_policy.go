@@ -40,232 +40,281 @@ type AgentDeploymentPolicy struct {
 	knowledgeSplitterConfigurationID string
 }
 
+// rolloutSelection is one role's resolved deployment pointers: the immutable
+// champion/challenger configurations plus the rollout stage controls.
+type rolloutSelection struct {
+	champion        string
+	challenger      string
+	stage           string
+	canaryBPS       int
+	rolloutSalt     string
+	promotionRecord string
+}
+
+func resolveDiagnosisRollout(cfg config.Deployment) (rolloutSelection, error) {
+	champion := cfg.DiagnosisChampionConfigurationID
+	if champion == "" {
+		champion = defaultDiagnosisConfigurationID
+	}
+	if err := validateDiagnosisConfigurationID(champion); err != nil {
+		return rolloutSelection{}, err
+	}
+	challenger := cfg.DiagnosisChallengerConfigurationID
+	if challenger != "" {
+		if err := validateDiagnosisConfigurationID(challenger); err != nil {
+			return rolloutSelection{}, err
+		}
+		if champion == challenger {
+			return rolloutSelection{}, fmt.Errorf("Diagnosis champion and challenger must be different immutable configurations")
+		}
+	}
+
+	stage := strings.ToLower(cfg.DiagnosisRolloutStage)
+	if stage == "" {
+		stage = DiagnosisRolloutChampion
+	}
+	if !validRolloutStage(stage) {
+		return rolloutSelection{}, fmt.Errorf("invalid Diagnosis rollout stage %q", stage)
+	}
+	canaryBPS := defaultDiagnosisCanaryBPS
+	if raw := cfg.DiagnosisCanaryBPS; raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil {
+			return rolloutSelection{}, fmt.Errorf("invalid DIAGNOSIS_CANARY_BPS %q", raw)
+		}
+		canaryBPS = value
+	}
+	if canaryBPS < 0 || canaryBPS > 10000 {
+		return rolloutSelection{}, fmt.Errorf("DIAGNOSIS_CANARY_BPS must be between 0 and 10000")
+	}
+	if stage == DiagnosisRolloutCanary && !approvedDiagnosisCanaryStep(canaryBPS) {
+		return rolloutSelection{}, fmt.Errorf("Diagnosis canary stage requires DIAGNOSIS_CANARY_BPS to be one of 500, 2500, 5000")
+	}
+	rolloutSalt := cfg.DiagnosisRolloutSalt
+	if rolloutSalt == "" {
+		rolloutSalt = defaultDiagnosisRolloutSalt
+	}
+	promotionRecord := cfg.DiagnosisPromotionRecord
+	if stage == DiagnosisRolloutShadow || stage == DiagnosisRolloutCanary || stage == DiagnosisRolloutPromoted {
+		if challenger == "" {
+			return rolloutSelection{}, fmt.Errorf("Diagnosis rollout stage %q requires a distinct active challenger configuration", stage)
+		}
+		if promotionRecord == "" {
+			return rolloutSelection{}, fmt.Errorf("Diagnosis rollout stage %q requires an approved promotion record", stage)
+		}
+		if err := validateDiagnosisPromotionRecord(
+			promotionRecord, champion, challenger,
+		); err != nil {
+			return rolloutSelection{}, err
+		}
+	}
+	return rolloutSelection{
+		champion: champion, challenger: challenger, stage: stage,
+		canaryBPS: canaryBPS, rolloutSalt: rolloutSalt, promotionRecord: promotionRecord,
+	}, nil
+}
+
+func resolveTreatmentRollout(cfg config.Deployment) (rolloutSelection, error) {
+	champion := cfg.TreatmentChampionConfigurationID
+	if champion == "" {
+		champion = defaultTreatmentConfigurationID
+	}
+	if err := validateTreatmentConfigurationID(champion); err != nil {
+		return rolloutSelection{}, err
+	}
+	challenger := cfg.TreatmentChallengerConfigurationID
+	if challenger != "" {
+		if err := validateTreatmentConfigurationID(challenger); err != nil {
+			return rolloutSelection{}, err
+		}
+		if champion == challenger {
+			return rolloutSelection{}, fmt.Errorf("Treatment champion and challenger must be different immutable configurations")
+		}
+	}
+
+	stage := strings.ToLower(cfg.TreatmentRolloutStage)
+	if stage == "" {
+		stage = TreatmentRolloutChampion
+	}
+	if !validRolloutStage(stage) {
+		return rolloutSelection{}, fmt.Errorf("invalid Treatment rollout stage %q", stage)
+	}
+	canaryBPS := defaultTreatmentCanaryBPS
+	if raw := cfg.TreatmentCanaryBPS; raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil {
+			return rolloutSelection{}, fmt.Errorf("invalid TREATMENT_CANARY_BPS %q", raw)
+		}
+		canaryBPS = value
+	}
+	if canaryBPS < 0 || canaryBPS > 10000 {
+		return rolloutSelection{}, fmt.Errorf("TREATMENT_CANARY_BPS must be between 0 and 10000")
+	}
+	if stage == TreatmentRolloutCanary && !approvedTreatmentCanaryStep(canaryBPS) {
+		return rolloutSelection{}, fmt.Errorf("Treatment canary stage requires TREATMENT_CANARY_BPS to be one of 500, 2500, 5000")
+	}
+	rolloutSalt := cfg.TreatmentRolloutSalt
+	if rolloutSalt == "" {
+		rolloutSalt = defaultTreatmentRolloutSalt
+	}
+	promotionRecord := cfg.TreatmentPromotionRecord
+	if stage == TreatmentRolloutShadow || stage == TreatmentRolloutCanary || stage == TreatmentRolloutPromoted {
+		if challenger == "" {
+			return rolloutSelection{}, fmt.Errorf("Treatment rollout stage %q requires a distinct active challenger configuration", stage)
+		}
+		if promotionRecord == "" {
+			return rolloutSelection{}, fmt.Errorf("Treatment rollout stage %q requires an approved promotion record", stage)
+		}
+	}
+	return rolloutSelection{
+		champion: champion, challenger: challenger, stage: stage,
+		canaryBPS: canaryBPS, rolloutSalt: rolloutSalt, promotionRecord: promotionRecord,
+	}, nil
+}
+
+func resolveAssessmentRollout(cfg config.Deployment) (rolloutSelection, error) {
+	champion := cfg.AssessmentChampionConfigurationID
+	if champion == "" {
+		champion = defaultAssessmentConfigurationID
+	}
+	if err := validateAssessmentServingConfigurationID(champion); err != nil {
+		return rolloutSelection{}, err
+	}
+	challenger := cfg.AssessmentChallengerConfigurationID
+	if challenger == "" {
+		// No challenger yet: Assessment has a single Champion configuration.
+		challenger = champion
+	}
+	if err := validateAssessmentKnownConfigurationID(challenger); err != nil {
+		return rolloutSelection{}, err
+	}
+
+	stage := strings.ToLower(cfg.AssessmentRolloutStage)
+	if stage == "" {
+		stage = AssessmentRolloutChampion
+	}
+	if !validRolloutStage(stage) {
+		return rolloutSelection{}, fmt.Errorf("invalid Assessment rollout stage %q", stage)
+	}
+	// A challenger is only required once a non-Champion stage is requested.
+	if stage != AssessmentRolloutChampion {
+		if champion == challenger {
+			return rolloutSelection{}, fmt.Errorf("Assessment rollout stage %q requires a distinct challenger configuration", stage)
+		}
+	}
+	if stage != AssessmentRolloutChampion {
+		if err := validateAssessmentServingConfigurationID(challenger); err != nil {
+			return rolloutSelection{}, fmt.Errorf("Assessment rollout stage %q cannot use challenger: %w", stage, err)
+		}
+	}
+	canaryBPS := defaultAssessmentCanaryBPS
+	if raw := cfg.AssessmentCanaryBPS; raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil {
+			return rolloutSelection{}, fmt.Errorf("invalid ASSESSMENT_CANARY_BPS %q", raw)
+		}
+		canaryBPS = value
+	}
+	if canaryBPS < 0 || canaryBPS > 10000 {
+		return rolloutSelection{}, fmt.Errorf("ASSESSMENT_CANARY_BPS must be between 0 and 10000")
+	}
+	if stage == AssessmentRolloutCanary && (canaryBPS <= 0 || canaryBPS >= 10000) {
+		return rolloutSelection{}, fmt.Errorf("canary stage requires ASSESSMENT_CANARY_BPS between 1 and 9999")
+	}
+	rolloutSalt := cfg.AssessmentRolloutSalt
+	if rolloutSalt == "" {
+		rolloutSalt = defaultAssessmentRolloutSalt
+	}
+	promotionRecord := cfg.AssessmentPromotionRecord
+	if stage == AssessmentRolloutShadow || stage == AssessmentRolloutCanary || stage == AssessmentRolloutPromoted {
+		if promotionRecord == "" {
+			return rolloutSelection{}, fmt.Errorf(
+				"Assessment rollout stage %q requires an approved promotion record",
+				stage,
+			)
+		}
+	}
+	return rolloutSelection{
+		champion: champion, challenger: challenger, stage: stage,
+		canaryBPS: canaryBPS, rolloutSalt: rolloutSalt, promotionRecord: promotionRecord,
+	}, nil
+}
+
+// resolveChampionConfiguration applies the default-then-validate rule shared
+// by the single-configuration roles.
+func resolveChampionConfiguration(raw, defaultID string, validate func(string) error) (string, error) {
+	id := raw
+	if id == "" {
+		id = defaultID
+	}
+	if err := validate(id); err != nil {
+		return "", err
+	}
+	return id, nil
+}
+
 // NewAgentDeploymentPolicy resolves the deployment pointers read by the
 // composition root (see config.Deployment) into the serving policy. Defaults,
 // validation and error text stay here: this is the package that owns what a
 // legal rollout is.
 func NewAgentDeploymentPolicy(cfg config.Deployment) (*AgentDeploymentPolicy, error) {
-	diagnosisChampion := cfg.DiagnosisChampionConfigurationID
-	if diagnosisChampion == "" {
-		diagnosisChampion = defaultDiagnosisConfigurationID
-	}
-	if err := validateDiagnosisConfigurationID(diagnosisChampion); err != nil {
+	diagnosis, err := resolveDiagnosisRollout(cfg)
+	if err != nil {
 		return nil, err
 	}
-	diagnosisChallenger := cfg.DiagnosisChallengerConfigurationID
-	if diagnosisChallenger != "" {
-		if err := validateDiagnosisConfigurationID(diagnosisChallenger); err != nil {
-			return nil, err
-		}
-		if diagnosisChampion == diagnosisChallenger {
-			return nil, fmt.Errorf("Diagnosis champion and challenger must be different immutable configurations")
-		}
-	}
-
-	diagnosisStage := strings.ToLower(cfg.DiagnosisRolloutStage)
-	if diagnosisStage == "" {
-		diagnosisStage = DiagnosisRolloutChampion
-	}
-	if !validRolloutStage(diagnosisStage) {
-		return nil, fmt.Errorf("invalid Diagnosis rollout stage %q", diagnosisStage)
-	}
-	diagnosisCanaryBPS := defaultDiagnosisCanaryBPS
-	if raw := cfg.DiagnosisCanaryBPS; raw != "" {
-		value, err := strconv.Atoi(raw)
-		if err != nil {
-			return nil, fmt.Errorf("invalid DIAGNOSIS_CANARY_BPS %q", raw)
-		}
-		diagnosisCanaryBPS = value
-	}
-	if diagnosisCanaryBPS < 0 || diagnosisCanaryBPS > 10000 {
-		return nil, fmt.Errorf("DIAGNOSIS_CANARY_BPS must be between 0 and 10000")
-	}
-	if diagnosisStage == DiagnosisRolloutCanary && !approvedDiagnosisCanaryStep(diagnosisCanaryBPS) {
-		return nil, fmt.Errorf("Diagnosis canary stage requires DIAGNOSIS_CANARY_BPS to be one of 500, 2500, 5000")
-	}
-	diagnosisRolloutSalt := cfg.DiagnosisRolloutSalt
-	if diagnosisRolloutSalt == "" {
-		diagnosisRolloutSalt = defaultDiagnosisRolloutSalt
-	}
-	diagnosisPromotionRecord := cfg.DiagnosisPromotionRecord
-	if diagnosisStage == DiagnosisRolloutShadow || diagnosisStage == DiagnosisRolloutCanary || diagnosisStage == DiagnosisRolloutPromoted {
-		if diagnosisChallenger == "" {
-			return nil, fmt.Errorf("Diagnosis rollout stage %q requires a distinct active challenger configuration", diagnosisStage)
-		}
-		if diagnosisPromotionRecord == "" {
-			return nil, fmt.Errorf("Diagnosis rollout stage %q requires an approved promotion record", diagnosisStage)
-		}
-		if err := validateDiagnosisPromotionRecord(
-			diagnosisPromotionRecord, diagnosisChampion, diagnosisChallenger,
-		); err != nil {
-			return nil, err
-		}
-	}
-
-	treatmentChampion := cfg.TreatmentChampionConfigurationID
-	if treatmentChampion == "" {
-		treatmentChampion = defaultTreatmentConfigurationID
-	}
-	if err := validateTreatmentConfigurationID(treatmentChampion); err != nil {
+	treatment, err := resolveTreatmentRollout(cfg)
+	if err != nil {
 		return nil, err
 	}
-	treatmentChallenger := cfg.TreatmentChallengerConfigurationID
-	if treatmentChallenger != "" {
-		if err := validateTreatmentConfigurationID(treatmentChallenger); err != nil {
-			return nil, err
-		}
-		if treatmentChampion == treatmentChallenger {
-			return nil, fmt.Errorf("Treatment champion and challenger must be different immutable configurations")
-		}
-	}
-
-	treatmentStage := strings.ToLower(cfg.TreatmentRolloutStage)
-	if treatmentStage == "" {
-		treatmentStage = TreatmentRolloutChampion
-	}
-	if !validRolloutStage(treatmentStage) {
-		return nil, fmt.Errorf("invalid Treatment rollout stage %q", treatmentStage)
-	}
-	treatmentCanaryBPS := defaultTreatmentCanaryBPS
-	if raw := cfg.TreatmentCanaryBPS; raw != "" {
-		value, err := strconv.Atoi(raw)
-		if err != nil {
-			return nil, fmt.Errorf("invalid TREATMENT_CANARY_BPS %q", raw)
-		}
-		treatmentCanaryBPS = value
-	}
-	if treatmentCanaryBPS < 0 || treatmentCanaryBPS > 10000 {
-		return nil, fmt.Errorf("TREATMENT_CANARY_BPS must be between 0 and 10000")
-	}
-	if treatmentStage == TreatmentRolloutCanary && !approvedTreatmentCanaryStep(treatmentCanaryBPS) {
-		return nil, fmt.Errorf("Treatment canary stage requires TREATMENT_CANARY_BPS to be one of 500, 2500, 5000")
-	}
-	treatmentRolloutSalt := cfg.TreatmentRolloutSalt
-	if treatmentRolloutSalt == "" {
-		treatmentRolloutSalt = defaultTreatmentRolloutSalt
-	}
-	treatmentPromotionRecord := cfg.TreatmentPromotionRecord
-	if treatmentStage == TreatmentRolloutShadow || treatmentStage == TreatmentRolloutCanary || treatmentStage == TreatmentRolloutPromoted {
-		if treatmentChallenger == "" {
-			return nil, fmt.Errorf("Treatment rollout stage %q requires a distinct active challenger configuration", treatmentStage)
-		}
-		if treatmentPromotionRecord == "" {
-			return nil, fmt.Errorf("Treatment rollout stage %q requires an approved promotion record", treatmentStage)
-		}
-	}
-
-	assessmentChampion := cfg.AssessmentChampionConfigurationID
-	if assessmentChampion == "" {
-		assessmentChampion = defaultAssessmentConfigurationID
-	}
-	if err := validateAssessmentServingConfigurationID(assessmentChampion); err != nil {
-		return nil, err
-	}
-	assessmentChallenger := cfg.AssessmentChallengerConfigurationID
-	if assessmentChallenger == "" {
-		// No challenger yet: Assessment has a single Champion configuration.
-		assessmentChallenger = assessmentChampion
-	}
-	if err := validateAssessmentKnownConfigurationID(assessmentChallenger); err != nil {
+	assessment, err := resolveAssessmentRollout(cfg)
+	if err != nil {
 		return nil, err
 	}
 
-	assessmentStage := strings.ToLower(cfg.AssessmentRolloutStage)
-	if assessmentStage == "" {
-		assessmentStage = AssessmentRolloutChampion
-	}
-	if !validRolloutStage(assessmentStage) {
-		return nil, fmt.Errorf("invalid Assessment rollout stage %q", assessmentStage)
-	}
-	// A challenger is only required once a non-Champion stage is requested.
-	if assessmentStage != AssessmentRolloutChampion {
-		if assessmentChampion == assessmentChallenger {
-			return nil, fmt.Errorf("Assessment rollout stage %q requires a distinct challenger configuration", assessmentStage)
-		}
-	}
-	if assessmentStage != AssessmentRolloutChampion {
-		if err := validateAssessmentServingConfigurationID(assessmentChallenger); err != nil {
-			return nil, fmt.Errorf("Assessment rollout stage %q cannot use challenger: %w", assessmentStage, err)
-		}
-	}
-	assessmentCanaryBPS := defaultAssessmentCanaryBPS
-	if raw := cfg.AssessmentCanaryBPS; raw != "" {
-		value, err := strconv.Atoi(raw)
-		if err != nil {
-			return nil, fmt.Errorf("invalid ASSESSMENT_CANARY_BPS %q", raw)
-		}
-		assessmentCanaryBPS = value
-	}
-	if assessmentCanaryBPS < 0 || assessmentCanaryBPS > 10000 {
-		return nil, fmt.Errorf("ASSESSMENT_CANARY_BPS must be between 0 and 10000")
-	}
-	if assessmentStage == AssessmentRolloutCanary && (assessmentCanaryBPS <= 0 || assessmentCanaryBPS >= 10000) {
-		return nil, fmt.Errorf("canary stage requires ASSESSMENT_CANARY_BPS between 1 and 9999")
-	}
-	assessmentRolloutSalt := cfg.AssessmentRolloutSalt
-	if assessmentRolloutSalt == "" {
-		assessmentRolloutSalt = defaultAssessmentRolloutSalt
-	}
-	assessmentPromotionRecord := cfg.AssessmentPromotionRecord
-	if assessmentStage == AssessmentRolloutShadow || assessmentStage == AssessmentRolloutCanary || assessmentStage == AssessmentRolloutPromoted {
-		if assessmentPromotionRecord == "" {
-			return nil, fmt.Errorf(
-				"Assessment rollout stage %q requires an approved promotion record",
-				assessmentStage,
-			)
-		}
-	}
-
-	consultationChampion := cfg.ConsultationChampionConfigurationID
-	if consultationChampion == "" {
-		consultationChampion = defaultConsultationConfigurationID
-	}
-	if err := validateConsultationConfigurationID(consultationChampion); err != nil {
+	consultationChampion, err := resolveChampionConfiguration(
+		cfg.ConsultationChampionConfigurationID, defaultConsultationConfigurationID, validateConsultationConfigurationID,
+	)
+	if err != nil {
 		return nil, err
 	}
-
-	postureChampion := cfg.PostureChampionConfigurationID
-	if postureChampion == "" {
-		postureChampion = defaultPostureConfigurationID
-	}
-	if err := validatePostureConfigurationID(postureChampion); err != nil {
+	postureChampion, err := resolveChampionConfiguration(
+		cfg.PostureChampionConfigurationID, defaultPostureConfigurationID, validatePostureConfigurationID,
+	)
+	if err != nil {
 		return nil, err
 	}
-
-	knowledgeCurator := cfg.KnowledgeCuratorConfigurationID
-	if knowledgeCurator == "" {
-		knowledgeCurator = defaultKnowledgeCuratorConfigurationID
-	}
-	if err := validateKnowledgeCuratorConfigurationID(knowledgeCurator); err != nil {
+	knowledgeCurator, err := resolveChampionConfiguration(
+		cfg.KnowledgeCuratorConfigurationID, defaultKnowledgeCuratorConfigurationID, validateKnowledgeCuratorConfigurationID,
+	)
+	if err != nil {
 		return nil, err
 	}
-	knowledgeSplitter := cfg.KnowledgeSplitterConfigurationID
-	if knowledgeSplitter == "" {
-		knowledgeSplitter = defaultKnowledgeSplitterConfigurationID
-	}
-	if err := validateKnowledgeSplitterConfigurationID(knowledgeSplitter); err != nil {
+	knowledgeSplitter, err := resolveChampionConfiguration(
+		cfg.KnowledgeSplitterConfigurationID, defaultKnowledgeSplitterConfigurationID, validateKnowledgeSplitterConfigurationID,
+	)
+	if err != nil {
 		return nil, err
 	}
 
 	return &AgentDeploymentPolicy{
-		diagnosisChampionConfigurationID:    diagnosisChampion,
-		diagnosisChallengerConfigurationID:  diagnosisChallenger,
-		diagnosisStage:                      diagnosisStage,
-		diagnosisCanaryBPS:                  diagnosisCanaryBPS,
-		diagnosisRolloutSalt:                diagnosisRolloutSalt,
-		diagnosisPromotionRecord:            diagnosisPromotionRecord,
-		treatmentChampionConfigurationID:    treatmentChampion,
-		treatmentChallengerConfigurationID:  treatmentChallenger,
-		treatmentStage:                      treatmentStage,
-		treatmentCanaryBPS:                  treatmentCanaryBPS,
-		treatmentRolloutSalt:                treatmentRolloutSalt,
-		treatmentPromotionRecord:            treatmentPromotionRecord,
-		assessmentChampionConfigurationID:   assessmentChampion,
-		assessmentChallengerConfigurationID: assessmentChallenger,
-		assessmentStage:                     assessmentStage,
-		assessmentCanaryBPS:                 assessmentCanaryBPS,
-		assessmentRolloutSalt:               assessmentRolloutSalt,
-		assessmentPromotionRecord:           assessmentPromotionRecord,
+		diagnosisChampionConfigurationID:    diagnosis.champion,
+		diagnosisChallengerConfigurationID:  diagnosis.challenger,
+		diagnosisStage:                      diagnosis.stage,
+		diagnosisCanaryBPS:                  diagnosis.canaryBPS,
+		diagnosisRolloutSalt:                diagnosis.rolloutSalt,
+		diagnosisPromotionRecord:            diagnosis.promotionRecord,
+		treatmentChampionConfigurationID:    treatment.champion,
+		treatmentChallengerConfigurationID:  treatment.challenger,
+		treatmentStage:                      treatment.stage,
+		treatmentCanaryBPS:                  treatment.canaryBPS,
+		treatmentRolloutSalt:                treatment.rolloutSalt,
+		treatmentPromotionRecord:            treatment.promotionRecord,
+		assessmentChampionConfigurationID:   assessment.champion,
+		assessmentChallengerConfigurationID: assessment.challenger,
+		assessmentStage:                     assessment.stage,
+		assessmentCanaryBPS:                 assessment.canaryBPS,
+		assessmentRolloutSalt:               assessment.rolloutSalt,
+		assessmentPromotionRecord:           assessment.promotionRecord,
 		consultationChampionConfigurationID: consultationChampion,
 		postureChampionConfigurationID:      postureChampion,
 		knowledgeCuratorConfigurationID:     knowledgeCurator,
