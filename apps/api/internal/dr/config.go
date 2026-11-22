@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bodysense/api/internal/config"
 )
 
 type Config struct {
@@ -38,34 +40,34 @@ type Config struct {
 }
 
 func ConfigFromEnv() (Config, error) {
-	maxAgeHours, err := strconv.Atoi(envOr("DR_MAX_BACKUP_AGE_HOURS", "30"))
+	maxAgeHours, err := strconv.Atoi(config.EnvOr("DR_MAX_BACKUP_AGE_HOURS", "30"))
 	if err != nil || maxAgeHours <= 0 {
 		return Config{}, errors.New("DR_MAX_BACKUP_AGE_HOURS must be a positive integer")
 	}
 	cfg := Config{
-		Environment:         envOr("APP_ENV", envOr("ENVIRONMENT", "development")),
-		Driver:              envOr("DR_OBJECT_STORE_DRIVER", "oss"),
+		Environment:         config.EnvOr("APP_ENV", config.EnvOr("ENVIRONMENT", "development")),
+		Driver:              config.EnvOr("DR_OBJECT_STORE_DRIVER", "oss"),
 		FilesystemRoot:      os.Getenv("DR_FILESYSTEM_ROOT"),
-		OSSRegion:           envOr("DR_OSS_REGION", "cn-hangzhou"),
+		OSSRegion:           config.EnvOr("DR_OSS_REGION", "cn-hangzhou"),
 		OSSBucket:           os.Getenv("DR_OSS_BUCKET"),
 		OSSEndpoint:         os.Getenv("DR_OSS_ENDPOINT"),
 		OSSUseInternal:      envBool("DR_OSS_USE_INTERNAL_ENDPOINT", true),
-		OSSCredentialType:   envOr("DR_OSS_CREDENTIAL_TYPE", "ecs_ram_role"),
+		OSSCredentialType:   config.EnvOr("DR_OSS_CREDENTIAL_TYPE", "ecs_ram_role"),
 		OSSECSRAMRole:       os.Getenv("DR_OSS_ECS_RAM_ROLE"),
-		OSSAccessKeyID:      envOr("ALIBABA_CLOUD_ACCESS_KEY_ID", os.Getenv("OSS_ACCESS_KEY_ID")),
-		OSSAccessKeySecret:  envOr("ALIBABA_CLOUD_ACCESS_KEY_SECRET", os.Getenv("OSS_ACCESS_KEY_SECRET")),
-		OSSSecurityToken:    envOr("ALIBABA_CLOUD_SECURITY_TOKEN", os.Getenv("OSS_SECURITY_TOKEN")),
-		OSSPrefix:           strings.Trim(envOr("DR_OSS_PREFIX", "bodysense/production/postgres"), "/"),
-		OSSServerEncryption: envOr("DR_OSS_SERVER_SIDE_ENCRYPTION", "AES256"),
-		DBHost:              envOr("DB_HOST", "127.0.0.1"),
-		DBPort:              envOr("DB_PORT", "5432"),
-		DBName:              envOr("DB_NAME", "bodysense"),
-		DBUser:              envOr("DB_USER", "bodysense"),
+		OSSAccessKeyID:      config.EnvOr("ALIBABA_CLOUD_ACCESS_KEY_ID", os.Getenv("OSS_ACCESS_KEY_ID")),
+		OSSAccessKeySecret:  config.EnvOr("ALIBABA_CLOUD_ACCESS_KEY_SECRET", os.Getenv("OSS_ACCESS_KEY_SECRET")),
+		OSSSecurityToken:    config.EnvOr("ALIBABA_CLOUD_SECURITY_TOKEN", os.Getenv("OSS_SECURITY_TOKEN")),
+		OSSPrefix:           strings.Trim(config.EnvOr("DR_OSS_PREFIX", "bodysense/production/postgres"), "/"),
+		OSSServerEncryption: config.EnvOr("DR_OSS_SERVER_SIDE_ENCRYPTION", "AES256"),
+		DBHost:              config.EnvOr("DB_HOST", "127.0.0.1"),
+		DBPort:              config.EnvOr("DB_PORT", "5432"),
+		DBName:              config.EnvOr("DB_NAME", "bodysense"),
+		DBUser:              config.EnvOr("DB_USER", "bodysense"),
 		DBPassword:          os.Getenv("DB_PASSWORD"),
-		DBSSLMode:           envOr("DB_SSLMODE", "disable"),
+		DBSSLMode:           config.EnvOr("DB_SSLMODE", "disable"),
 		ReleaseRevision:     os.Getenv("DR_RELEASE_REVISION"),
-		TempRoot:            envOr("DR_TEMP_ROOT", os.TempDir()),
-		DomainValidatorPath: envOr("DR_DOMAIN_VALIDATOR_PATH", "/app/domain-validator"),
+		TempRoot:            config.EnvOr("DR_TEMP_ROOT", os.TempDir()),
+		DomainValidatorPath: config.EnvOr("DR_DOMAIN_VALIDATOR_PATH", "/app/domain-validator"),
 		MaxBackupAge:        time.Duration(maxAgeHours) * time.Hour,
 	}
 	if err := cfg.Validate(); err != nil {
@@ -122,13 +124,6 @@ func (c Config) Validate() error {
 		return fmt.Errorf("unsupported DR_OBJECT_STORE_DRIVER %q", c.Driver)
 	}
 	return nil
-}
-
-func envOr(key, fallback string) string {
-	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
-		return value
-	}
-	return fallback
 }
 
 func envBool(key string, fallback bool) bool {
