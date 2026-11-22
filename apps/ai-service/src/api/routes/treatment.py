@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from ...services.treatment_agent_service import TreatmentAgentService, get_treatment_agent_service
+from ...settings import e2e_stub_ai_enabled
 from ...testing_support.deterministic_ai import deterministic_treatment_model
 
 logger = logging.getLogger(__name__)
@@ -34,9 +34,7 @@ class TreatmentRecommendationRequest(BaseModel):
 @router.post("/recommend")
 async def recommend_treatment(request: TreatmentRecommendationRequest):
     try:
-        if os.getenv("BODYSENSE_E2E_STUB_AI") == "1" and os.getenv(
-            "ENVIRONMENT", "development"
-        ).lower() in {"development", "test", "e2e"}:
+        if e2e_stub_ai_enabled():
             # E2E stays deterministic but must execute the same immutable
             # Treatment contract, EvidenceGap trace and governance path as production.
             service = TreatmentAgentService(
