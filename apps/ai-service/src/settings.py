@@ -105,9 +105,7 @@ def embedding_model(*, env: dict[str, str] | None = None) -> str:
     return lookup.get("EMBEDDING_MODEL", "paraphrase-multilingual-MiniLM-L12-v2")
 
 
-def embedding_dimensions(
-    default: int = 1536, *, env: dict[str, str] | None = None
-) -> int:
+def embedding_dimensions(default: int = 1536, *, env: dict[str, str] | None = None) -> int:
     """Vector dimension used to size and validate embeddings.
 
     The env var (when set) wins over the caller-provided ``default``, matching
@@ -199,6 +197,8 @@ def gateway_api_key(*, env: dict[str, str] | None = None) -> str:
     """Client credential for the internal LiteLLM gateway transport."""
     lookup = os.environ if env is None else env
     return lookup.get("LITELLM_API_KEY", "").strip()
+
+
 def cors_origins(*, env: dict[str, str] | None = None) -> list[str]:
     """Allowed CORS origins for the HTTP API (comma-separated in the env)."""
     lookup = os.environ if env is None else env
@@ -230,9 +230,7 @@ def e2e_stub_ai_enabled(*, env: dict[str, str] | None = None) -> bool:
 def ephemeral_checkpointer_allowed(*, env: dict[str, str] | None = None) -> bool:
     """Whether the in-memory checkpointer fallback is explicitly allowed."""
     lookup = os.environ if env is None else env
-    return lookup.get(
-        "BODYSENSE_ALLOW_EPHEMERAL_CHECKPOINTER", ""
-    ).strip().lower() in {
+    return lookup.get("BODYSENSE_ALLOW_EPHEMERAL_CHECKPOINTER", "").strip().lower() in {
         "1",
         "true",
         "yes",
@@ -257,9 +255,7 @@ def episodic_proposal_max_tokens(*, env: dict[str, str] | None = None) -> int:
     return max_tokens
 
 
-def health_document_model_root(
-    default: str, *, env: dict[str, str] | None = None
-) -> str:
+def health_document_model_root(default: str, *, env: dict[str, str] | None = None) -> str:
     """Root directory of the health-document OCR models.
 
     The env var (when set) wins over the caller-provided ``default``, matching
@@ -269,9 +265,7 @@ def health_document_model_root(
     return lookup.get("BODYSENSE_HEALTH_DOCUMENT_MODEL_ROOT", default)
 
 
-def knowledge_data_root(
-    default: str, *, env: dict[str, str] | None = None
-) -> str:
+def knowledge_data_root(default: str, *, env: dict[str, str] | None = None) -> str:
     """Allowed data root for knowledge video ingestion.
 
     The env var (when set) wins over the caller-provided ``default``, matching

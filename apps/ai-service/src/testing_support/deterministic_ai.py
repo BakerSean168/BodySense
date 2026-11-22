@@ -16,6 +16,7 @@ from pydantic_ai.models.test import TestModel
 from .. import settings
 from ..services.assessment_evidence import build_assessment_evidence_catalog
 
+
 def deterministic_ai_enabled() -> bool:
     return settings.deterministic_ai_enabled()
 
