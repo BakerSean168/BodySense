@@ -61,40 +61,54 @@ class KnowledgeEvidenceSearcher:
         )
 
 
-def normalize_evidence(user_id: str, result: Any) -> dict[str, Any]:
+def _evidence_source_identity(
+    result: Any,
+) -> tuple[str, str, str, dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Resolve (source_type, source_key, source_version, locator, claim, metadata)."""
     result_source_type = str(getattr(result, "source_type", "") or "")
-    if result_source_type == "thought_forest_note":
-        unit_metadata = dict(getattr(result, "unit_metadata", {}) or {})
-        source_metadata = dict(getattr(result, "source_metadata", {}) or {})
-        locator = dict(unit_metadata.get("source_locator") or {})
-        claim_candidate = dict(unit_metadata.get("claim_candidate") or {})
-        repository = dict(source_metadata.get("repository") or {})
-        git_commit = str(locator.get("git_commit") or repository.get("git_commit") or "")
-        section_hash = str(unit_metadata.get("section_content_hash") or "")
-        stable_source_key = str(getattr(result, "source_key", "") or "")
-        unit_key = str(getattr(result, "unit_key", "") or "")
-        if stable_source_key and unit_key:
-            source_key = f"{stable_source_key}#{unit_key}"
-        else:
-            source_key = stable_source_key or f"knowledge-unit:{result.id}"
-        if git_commit and section_hash:
-            source_version = f"{git_commit}:{section_hash}"
-        else:
-            source_version = (
-                git_commit or section_hash or str(getattr(result, "source_timestamp", "") or "")
-            )
-        source_type = "thought_forest_note"
-    else:
-        source_type = "knowledge_unit"
-        source_key = f"knowledge-unit:{result.id}"
+    if result_source_type != "thought_forest_note":
         source_version = str(getattr(result, "source_timestamp", "") or "")
-        locator = {}
-        claim_candidate = {}
+        return "knowledge_unit", f"knowledge-unit:{result.id}", source_version, {}, {}, {}
 
+    unit_metadata = dict(getattr(result, "unit_metadata", {}) or {})
+    source_metadata = dict(getattr(result, "source_metadata", {}) or {})
+    locator = dict(unit_metadata.get("source_locator") or {})
+    claim_candidate = dict(unit_metadata.get("claim_candidate") or {})
+    repository = dict(source_metadata.get("repository") or {})
+    git_commit = str(locator.get("git_commit") or repository.get("git_commit") or "")
+    section_hash = str(unit_metadata.get("section_content_hash") or "")
+    stable_source_key = str(getattr(result, "source_key", "") or "")
+    unit_key = str(getattr(result, "unit_key", "") or "")
+    if stable_source_key and unit_key:
+        source_key = f"{stable_source_key}#{unit_key}"
+    else:
+        source_key = stable_source_key or f"knowledge-unit:{result.id}"
+    if git_commit and section_hash:
+        source_version = f"{git_commit}:{section_hash}"
+    else:
+        source_version = (
+            git_commit or section_hash or str(getattr(result, "source_timestamp", "") or "")
+        )
+    return (
+        "thought_forest_note",
+        source_key,
+        source_version,
+        locator,
+        claim_candidate,
+        unit_metadata,
+    )
+
+
+def _base_evidence(
+    user_id: str,
+    result: Any,
+    source_type: str,
+    source_key: str,
+    source_version: str,
+) -> dict[str, Any]:
     identity = ":".join(["bodysense:evidence", user_id, source_type, source_key, source_version])
-    evidence_id = str(uuid.uuid5(uuid.NAMESPACE_URL, identity))
-    evidence = {
-        "evidence_id": evidence_id,
+    return {
+        "evidence_id": str(uuid.uuid5(uuid.NAMESPACE_URL, identity)),
         "source_type": source_type,
         "source_key": source_key,
         "source_version": source_version,
@@ -110,45 +124,53 @@ def normalize_evidence(user_id: str, result: Any) -> dict[str, Any]:
         "source_timestamp": result.source_timestamp,
         "tags": result.tags,
     }
-    if locator:
-        evidence["source_locator"] = locator
-    external_evidence_candidates = (
-        list(unit_metadata.get("external_evidence_candidates") or [])
-        if result_source_type == "thought_forest_note"
-        else []
-    )
-    claim_admissibility = (
-        dict(unit_metadata.get("claim_admissibility") or {})
-        if result_source_type == "thought_forest_note"
-        else {}
-    )
-    claim_review = (
-        dict(unit_metadata.get("claim_review") or {})
-        if result_source_type == "thought_forest_note"
-        else {}
-    )
+
+
+def _attach_thought_forest_metadata(
+    evidence: dict[str, Any],
+    result: Any,
+    unit_metadata: dict[str, Any],
+) -> None:
+    external_evidence_candidates = list(unit_metadata.get("external_evidence_candidates") or [])
     if external_evidence_candidates:
         evidence["external_evidence_candidates"] = external_evidence_candidates
+    claim_admissibility = dict(unit_metadata.get("claim_admissibility") or {})
     if claim_admissibility:
         evidence["claim_admissibility"] = claim_admissibility
+    claim_review = dict(unit_metadata.get("claim_review") or {})
     if claim_review:
         evidence["claim_review"] = claim_review
-    if result_source_type == "thought_forest_note":
-        evidence["lifecycle_status"] = str(getattr(result, "lifecycle_status", "") or "")
-        evidence["review_status"] = str(getattr(result, "review_status", "") or "")
-        evidence["quality_score"] = float(getattr(result, "quality_score", 0.0) or 0.0)
-        publication_id = str(getattr(result, "publication_id", "") or "")
-        if publication_id:
-            evidence["publication_id"] = publication_id
-        published_version = getattr(result, "published_version", None)
-        if published_version is not None:
-            evidence["published_version"] = int(published_version)
-        publication_key = str(getattr(result, "publication_key", "") or "")
-        if publication_key:
-            evidence["publication_key"] = publication_key
-        publication_batch_key = str(getattr(result, "publication_batch_key", "") or "")
-        if publication_batch_key:
-            evidence["publication_batch_key"] = publication_batch_key
+    evidence["lifecycle_status"] = str(getattr(result, "lifecycle_status", "") or "")
+    evidence["review_status"] = str(getattr(result, "review_status", "") or "")
+    evidence["quality_score"] = float(getattr(result, "quality_score", 0.0) or 0.0)
+    publication_id = str(getattr(result, "publication_id", "") or "")
+    if publication_id:
+        evidence["publication_id"] = publication_id
+    published_version = getattr(result, "published_version", None)
+    if published_version is not None:
+        evidence["published_version"] = int(published_version)
+    publication_key = str(getattr(result, "publication_key", "") or "")
+    if publication_key:
+        evidence["publication_key"] = publication_key
+    publication_batch_key = str(getattr(result, "publication_batch_key", "") or "")
+    if publication_batch_key:
+        evidence["publication_batch_key"] = publication_batch_key
+
+
+def normalize_evidence(user_id: str, result: Any) -> dict[str, Any]:
+    (
+        source_type,
+        source_key,
+        source_version,
+        locator,
+        claim_candidate,
+        unit_metadata,
+    ) = _evidence_source_identity(result)
+    evidence = _base_evidence(user_id, result, source_type, source_key, source_version)
+    if locator:
+        evidence["source_locator"] = locator
+    if source_type == "thought_forest_note":
+        _attach_thought_forest_metadata(evidence, result, unit_metadata)
     if claim_candidate:
         evidence["claim_candidate"] = claim_candidate
         for key in (
