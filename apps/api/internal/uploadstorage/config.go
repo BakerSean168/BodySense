@@ -6,6 +6,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/bodysense/api/internal/config"
 )
 
 type Config struct {
@@ -27,20 +29,20 @@ type Config struct {
 
 func ConfigFromEnv() (Config, error) {
 	cfg := Config{
-		Environment:         envOr("APP_ENV", envOr("ENVIRONMENT", "development")),
-		Backend:             envOr("UPLOAD_STORAGE_BACKEND", "local"),
-		LocalRoot:           envOr("UPLOAD_STORAGE_LOCAL_ROOT", "uploads"),
-		OSSRegion:           envOr("UPLOAD_OSS_REGION", "cn-hangzhou"),
+		Environment:         config.EnvOr("APP_ENV", config.EnvOr("ENVIRONMENT", "development")),
+		Backend:             config.EnvOr("UPLOAD_STORAGE_BACKEND", "local"),
+		LocalRoot:           config.EnvOr("UPLOAD_STORAGE_LOCAL_ROOT", "uploads"),
+		OSSRegion:           config.EnvOr("UPLOAD_OSS_REGION", "cn-hangzhou"),
 		OSSBucket:           strings.TrimSpace(os.Getenv("UPLOAD_OSS_BUCKET")),
 		OSSEndpoint:         strings.TrimSpace(os.Getenv("UPLOAD_OSS_ENDPOINT")),
 		OSSUseInternal:      envBool("UPLOAD_OSS_USE_INTERNAL_ENDPOINT", true),
-		OSSCredentialType:   envOr("UPLOAD_OSS_CREDENTIAL_TYPE", "ecs_ram_role"),
+		OSSCredentialType:   config.EnvOr("UPLOAD_OSS_CREDENTIAL_TYPE", "ecs_ram_role"),
 		OSSECSRAMRole:       strings.TrimSpace(os.Getenv("UPLOAD_OSS_ECS_RAM_ROLE")),
-		OSSAccessKeyID:      envOr("ALIBABA_CLOUD_ACCESS_KEY_ID", os.Getenv("OSS_ACCESS_KEY_ID")),
-		OSSAccessKeySecret:  envOr("ALIBABA_CLOUD_ACCESS_KEY_SECRET", os.Getenv("OSS_ACCESS_KEY_SECRET")),
-		OSSSecurityToken:    envOr("ALIBABA_CLOUD_SECURITY_TOKEN", os.Getenv("OSS_SECURITY_TOKEN")),
-		OSSPrefix:           strings.Trim(envOr("UPLOAD_OSS_PREFIX", "bodysense/production/uploads"), "/"),
-		OSSServerEncryption: envOr("UPLOAD_OSS_SERVER_SIDE_ENCRYPTION", "AES256"),
+		OSSAccessKeyID:      config.EnvOr("ALIBABA_CLOUD_ACCESS_KEY_ID", os.Getenv("OSS_ACCESS_KEY_ID")),
+		OSSAccessKeySecret:  config.EnvOr("ALIBABA_CLOUD_ACCESS_KEY_SECRET", os.Getenv("OSS_ACCESS_KEY_SECRET")),
+		OSSSecurityToken:    config.EnvOr("ALIBABA_CLOUD_SECURITY_TOKEN", os.Getenv("OSS_SECURITY_TOKEN")),
+		OSSPrefix:           strings.Trim(config.EnvOr("UPLOAD_OSS_PREFIX", "bodysense/production/uploads"), "/"),
+		OSSServerEncryption: config.EnvOr("UPLOAD_OSS_SERVER_SIDE_ENCRYPTION", "AES256"),
 	}
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err
@@ -83,13 +85,6 @@ func (c Config) Validate() error {
 		return fmt.Errorf("unsupported UPLOAD_OSS_CREDENTIAL_TYPE %q", c.OSSCredentialType)
 	}
 	return nil
-}
-
-func envOr(key, fallback string) string {
-	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
-		return value
-	}
-	return fallback
 }
 
 func envBool(key string, fallback bool) bool {
