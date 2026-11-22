@@ -13,6 +13,7 @@ from psycopg import AsyncConnection
 from psycopg.rows import TupleRow
 from psycopg_pool import AsyncConnectionPool
 
+from ..settings import build_database_url
 from .embedding import EmbeddingGenerator, get_embedding_generator
 from .knowledge_library_admin import KnowledgeAdminMixin
 from .knowledge_library_base import (
@@ -67,21 +68,7 @@ class KnowledgeLibrary(KnowledgeSearchMixin, KnowledgeIngestMixin, KnowledgeAdmi
         self._init_lock = asyncio.Lock()
 
     def _build_database_url(self) -> str:
-        env_url = os.getenv("DATABASE_URL")
-        if env_url:
-            return env_url.replace("+asyncpg", "").replace("+psycopg", "")
-
-        host = os.getenv("DB_HOST", "127.0.0.1")
-        port = os.getenv("DB_PORT", "5432")
-        name = os.getenv("DB_NAME", "bodysense")
-        user = os.getenv("DB_USER", "bodysense")
-        password = os.getenv("DB_PASSWORD")
-        if password is None:
-            password = "bodysense123"
-            logger.warning(
-                "DB_PASSWORD not set, using default password. Set DB_PASSWORD in your .env file."
-            )
-        return f"postgresql://{user}:{password}@{host}:{port}/{name}"
+        return build_database_url(url_overrides=("DATABASE_URL",))
 
     async def initialize(self) -> "KnowledgeLibrary":
         """Open the bounded async pool once; startup failures surface promptly."""
