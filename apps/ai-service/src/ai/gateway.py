@@ -6,7 +6,6 @@ credentials, retry, and fallback are exclusively gateway responsibilities.
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -14,9 +13,8 @@ from pydantic_ai.models import Model
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
+from ..settings import gateway_api_key, gateway_base_url
 from .errors import GatewayUnavailableError
-
-_DEFAULT_GATEWAY_BASE_URL = "http://localhost:4000/v1"
 
 CONSULTATION_ROUTE = "consultation.reply"
 ASSESSMENT_ROUTE = "assessment.generate"
@@ -52,8 +50,8 @@ def gateway_route(use_case: str) -> GatewayRoute:
 
 
 def gateway_credentials() -> tuple[str, str]:
-    base_url = os.getenv("LITELLM_BASE_URL", _DEFAULT_GATEWAY_BASE_URL).strip()
-    api_key = os.getenv("LITELLM_API_KEY", "").strip()
+    base_url = gateway_base_url()
+    api_key = gateway_api_key()
     if not base_url:
         raise GatewayUnavailableError("LITELLM_BASE_URL is required")
     if not api_key:
