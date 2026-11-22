@@ -1,6 +1,5 @@
 """BodySense AI Service - FastAPI application."""
 
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -37,6 +36,7 @@ from .api.routes import (  # noqa: E402
 )
 from .rag.knowledge_library import knowledge_library_lifespan  # noqa: E402
 from .runtime.checkpointing import runtime_checkpointer_lifespan  # noqa: E402
+from .settings import cors_origins  # noqa: E402
 
 
 @asynccontextmanager
@@ -52,7 +52,7 @@ app = FastAPI(
 )
 
 # CORS middleware
-_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+_cors_origins = cors_origins()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in _cors_origins],
