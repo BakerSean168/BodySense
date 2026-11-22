@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/bodysense/api/internal/model"
@@ -74,7 +75,18 @@ func decodeBodyStateChange(revision model.BodyStateRevision) bodyStateChange {
 		return change
 	}
 	var metadata bodyStateRevisionMetadata
-	_ = json.Unmarshal(revision.Changes, &metadata)
+	// Classification is driven by ChangeType, not by the metadata payload, and
+	// safety.* is fail-closed before this point, so an undecodable payload only
+	// yields empty IDs. Tests pin that tolerance; the defect was silence, so we
+	// log instead of changing the signature.
+	if err := json.Unmarshal(revision.Changes, &metadata); err != nil {
+		slog.Default().Warn(
+			"body state revision metadata is not valid JSON; classifying with empty IDs",
+			"error", err,
+			"revision", revision.Revision,
+			"change_type", revision.ChangeType,
+		)
+	}
 	switch {
 	case revision.ChangeType == "facts.recorded":
 		change.Kind, change.FactIDs = bodyStateChangeFactsRecorded, metadata.FactIDs
@@ -158,7 +170,15 @@ func resolveBodyStateRevisionFacts(ctx context.Context, lookup bodyFactLookup, o
 func bodyFactConcernKey(fact model.BodyFact) string {
 	if fact.Kind == "symptom" {
 		var regions []string
-		_ = json.Unmarshal(fact.BodyRegionIDs, &regions)
+		// An undecodable region list only degrades grouping precision: the fact
+		// falls back to the "general" concern key, so tolerate with a log.
+		if err := json.Unmarshal(fact.BodyRegionIDs, &regions); err != nil {
+			slog.Default().Warn(
+				"body fact region ids are not valid JSON; grouping under general",
+				"fact_id", fact.ID,
+				"error", err,
+			)
+		}
 		if len(regions) > 0 && strings.TrimSpace(regions[0]) != "" {
 			return "region:" + regions[0]
 		}
