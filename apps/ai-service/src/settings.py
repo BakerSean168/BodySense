@@ -26,9 +26,21 @@ __all__ = [
     "embedding_model",
     "embedding_provider",
     "embedding_revision",
+    "cors_origins",
+    "deterministic_ai_enabled",
+    "e2e_stub_ai_enabled",
+    "ephemeral_checkpointer_allowed",
+    "episodic_proposal_max_tokens",
     "gateway_api_key",
     "gateway_base_url",
+    "health_document_model_root",
+    "knowledge_data_root",
+    "knowledge_pool_max_size",
+    "knowledge_pool_min_size",
     "local_embedding_max_concurrency",
+    "pose_model_path_override",
+    "splitter_provider",
+    "tessdata_prefix",
 ]
 
 
@@ -187,3 +199,113 @@ def gateway_api_key(*, env: dict[str, str] | None = None) -> str:
     """Client credential for the internal LiteLLM gateway transport."""
     lookup = os.environ if env is None else env
     return lookup.get("LITELLM_API_KEY", "").strip()
+def cors_origins(*, env: dict[str, str] | None = None) -> list[str]:
+    """Allowed CORS origins for the HTTP API (comma-separated in the env)."""
+    lookup = os.environ if env is None else env
+    return lookup.get("CORS_ORIGINS", "http://localhost:5173").split(",")
+
+
+def deterministic_ai_enabled(*, env: dict[str, str] | None = None) -> bool:
+    """Whether deterministic test models replace the real providers."""
+    lookup = os.environ if env is None else env
+    return lookup.get("BODYSENSE_DETERMINISTIC_AI", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def e2e_stub_ai_enabled(*, env: dict[str, str] | None = None) -> bool:
+    """Whether the E2E stub AI is active (explicit opt-in, non-production)."""
+    lookup = os.environ if env is None else env
+    environment = lookup.get("ENVIRONMENT", "development").lower()
+    return lookup.get("BODYSENSE_E2E_STUB_AI") == "1" and environment in {
+        "development",
+        "test",
+        "e2e",
+    }
+
+
+def ephemeral_checkpointer_allowed(*, env: dict[str, str] | None = None) -> bool:
+    """Whether the in-memory checkpointer fallback is explicitly allowed."""
+    lookup = os.environ if env is None else env
+    return lookup.get(
+        "BODYSENSE_ALLOW_EPHEMERAL_CHECKPOINTER", ""
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+    }
+
+
+def episodic_proposal_max_tokens(*, env: dict[str, str] | None = None) -> int:
+    """Output cap for one episodic shadow proposal (default 1024).
+
+    Unset, non-numeric, zero or negative values keep the default.
+    """
+    lookup = os.environ if env is None else env
+    raw = lookup.get("EPISODIC_PROPOSAL_MAX_TOKENS", "").strip()
+    if raw == "":
+        return 1024
+    try:
+        max_tokens = int(raw)
+    except ValueError:
+        return 1024
+    if max_tokens <= 0:
+        return 1024
+    return max_tokens
+
+
+def health_document_model_root(
+    default: str, *, env: dict[str, str] | None = None
+) -> str:
+    """Root directory of the health-document OCR models.
+
+    The env var (when set) wins over the caller-provided ``default``, matching
+    the historical ``os.getenv(MODEL_ROOT_ENV, str(DEFAULT_MODEL_ROOT))`` read.
+    """
+    lookup = os.environ if env is None else env
+    return lookup.get("BODYSENSE_HEALTH_DOCUMENT_MODEL_ROOT", default)
+
+
+def knowledge_data_root(
+    default: str, *, env: dict[str, str] | None = None
+) -> str:
+    """Allowed data root for knowledge video ingestion.
+
+    The env var (when set) wins over the caller-provided ``default``, matching
+    the historical ``os.getenv("KNOWLEDGE_DATA_ROOT", ...)`` read.
+    """
+    lookup = os.environ if env is None else env
+    return lookup.get("KNOWLEDGE_DATA_ROOT", default)
+
+
+def knowledge_pool_max_size(*, env: dict[str, str] | None = None) -> int:
+    """Upper bound of the knowledge Postgres connection pool."""
+    lookup = os.environ if env is None else env
+    return int(lookup.get("KNOWLEDGE_POOL_MAX_SIZE", "8"))
+
+
+def knowledge_pool_min_size(*, env: dict[str, str] | None = None) -> int:
+    """Lower bound of the knowledge Postgres connection pool."""
+    lookup = os.environ if env is None else env
+    return int(lookup.get("KNOWLEDGE_POOL_MIN_SIZE", "1"))
+
+
+def pose_model_path_override(*, env: dict[str, str] | None = None) -> str:
+    """Explicit pose landmarker model path override (empty when unset)."""
+    lookup = os.environ if env is None else env
+    return lookup.get("BODYSENSE_POSE_MODEL_PATH", "").strip()
+
+
+def splitter_provider(*, env: dict[str, str] | None = None) -> str:
+    """Knowledge-pack splitter backend selector ("heuristic" by default)."""
+    lookup = os.environ if env is None else env
+    return lookup.get("SPLITTER_PROVIDER", "heuristic")
+
+
+def tessdata_prefix(*, env: dict[str, str] | None = None) -> str:
+    """Tesseract data directory override (empty when unset)."""
+    lookup = os.environ if env is None else env
+    return lookup.get("TESSDATA_PREFIX", "").strip()
