@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -201,6 +202,68 @@ func TestAssessmentRegressionExportCarriesEvidenceContractSemantics(t *testing.T
 	fields, _ := metadata["forbidden_output_fields"].([]string)
 	if !stringSliceContains(fields, "health_grade") || !stringSliceContains(fields, "dimension_scores") {
 		t.Fatalf("v2 regression must forbid legacy score fields: %#v", metadata)
+	}
+}
+
+func TestAssessmentReplayFailsWhenBaselineObservationsAreCorrupt(t *testing.T) {
+	svc, repo := newAssessmentReplaySvc()
+	report := assessmentReplayTestReport()
+	report.Observations = json.RawMessage(`{not json`)
+	repo.created = report
+
+	_, err := svc.HistoricalReplay(context.Background(), report.UserID, report.ID)
+	if err == nil {
+		t.Fatal("replay must fail when baseline observations are corrupt JSON")
+	}
+	if !strings.Contains(err.Error(), "observations") {
+		t.Fatalf("error must point at the observations column, got %v", err)
+	}
+}
+
+func TestAssessmentReplayFailsWhenBaselineInformationGapsAreCorrupt(t *testing.T) {
+	svc, repo := newAssessmentReplaySvc()
+	report := assessmentReplayTestReport()
+	report.InformationGaps = json.RawMessage(`{not json`)
+	repo.created = report
+
+	_, err := svc.HistoricalReplay(context.Background(), report.UserID, report.ID)
+	if err == nil {
+		t.Fatal("replay must fail when baseline information gaps are corrupt JSON")
+	}
+	if !strings.Contains(err.Error(), "information_gaps") {
+		t.Fatalf("error must point at the information_gaps column, got %v", err)
+	}
+}
+
+func TestAssessmentReplayFailsWhenGenerationDecisionTraceIsCorrupt(t *testing.T) {
+	svc, repo := newAssessmentReplaySvc()
+	report := assessmentReplayTestReport()
+	report.GenerationDecisionTrace = datatypes.JSON(`{not json`)
+	repo.created = report
+
+	_, err := svc.HistoricalReplay(context.Background(), report.UserID, report.ID)
+	if err == nil {
+		t.Fatal("replay must fail when the generation decision trace is corrupt JSON")
+	}
+	if !strings.Contains(err.Error(), "generation decision trace") {
+		t.Fatalf("error must point at the generation decision trace, got %v", err)
+	}
+}
+
+func TestAssessmentReplayToleratesCorruptSafetyNotes(t *testing.T) {
+	svc, repo := newAssessmentReplaySvc()
+	report := assessmentReplayTestReport()
+	report.SafetyNotes = json.RawMessage(`{not json`)
+	repo.created = report
+
+	replayed, err := svc.HistoricalReplay(context.Background(), report.UserID, report.ID)
+	if err != nil {
+		t.Fatalf("corrupt safety_notes must be tolerated, got %v", err)
+	}
+	// Safety notes are informational only; a corrupt column degrades to an
+	// empty snapshot field instead of failing the replay.
+	if replayed.Baseline.SafetyNoteCount != 0 {
+		t.Fatalf("corrupt safety_notes must degrade to an empty baseline, got %d", replayed.Baseline.SafetyNoteCount)
 	}
 }
 
