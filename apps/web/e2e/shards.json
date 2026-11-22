@@ -7,6 +7,7 @@
     {
       "index": 1,
       "files": [
+        "apps/web/e2e/ask-user-body-facts-rejection.spec.ts",
         "apps/web/e2e/ask-user-body-facts.spec.ts",
         "apps/web/e2e/body-canvas-v3.spec.ts",
         "apps/web/e2e/body-episode-associations.spec.ts",
