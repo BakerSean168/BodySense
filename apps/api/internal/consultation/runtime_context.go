@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"log/slog"
 	"net/http"
 
@@ -157,7 +156,7 @@ func (r *Runtime) buildBusinessContext(
 	var bodyContext *service.AgentBodyContext
 	if r.bodyStateService != nil {
 		if view, err := r.bodyStateService.GetAgentBodyContext(ctx, uid); err != nil {
-			log.Printf("agent body context load failed for user %s: %v", uid, err)
+			slog.Default().Warn("agent_body_context_load_failed", "user_id", uid, "error", err)
 		} else {
 			bodyContext = view
 		}
@@ -168,7 +167,7 @@ func (r *Runtime) buildBusinessContext(
 		if history, err := r.contextRetrievalService.Retrieve(
 			ctx, uid, conversationID, queryText, bodyContext,
 		); err != nil {
-			log.Printf("historical context retrieval failed for conversation %s: %v", conversationID, err)
+			slog.Default().Warn("historical_context_retrieval_failed", "conversation_id", conversationID, "error", err)
 		} else {
 			bc.RelevantHistory = history
 		}
@@ -183,7 +182,7 @@ func (r *Runtime) buildBusinessContext(
 	}
 	if r.diagnosisReader != nil {
 		if diagnosis, err := r.diagnosisReader.Read(ctx, uid); err != nil {
-			log.Printf("current diagnosis context load failed for user %s: %v", uid, err)
+			slog.Default().Warn("current_diagnosis_context_load_failed", "user_id", uid, "error", err)
 		} else if diagnosis != nil && diagnosis.CurrentRevision > 0 {
 			if raw, marshalErr := json.Marshal(diagnosis); marshalErr == nil {
 				bc.CurrentDiagnosis = raw
@@ -202,7 +201,7 @@ func (r *Runtime) buildBusinessContext(
 	}
 	summary, err := r.uploadService.GetPostureAnalysisSummary(ctx, uid)
 	if err != nil {
-		log.Printf("posture analysis prefetch failed for user %s: %v", uid, err)
+		slog.Default().Warn("posture_analysis_prefetch_failed", "user_id", uid, "error", err)
 		return bc
 	}
 	if raw, err := json.Marshal(summary); err == nil {
@@ -283,7 +282,7 @@ func (r *Runtime) consultationContextWindow(ctx context.Context, uid, conversati
 	}
 	window, err := r.chatRetention.ContextWindow(ctx, uid, conversationID)
 	if err != nil {
-		log.Printf("chat context window read failed for conversation %s: %v", conversationID, err)
+		slog.Default().Warn("chat_context_window_read_failed", "conversation_id", conversationID, "error", err)
 		return nil
 	}
 	out := &service.ConsultationContextWindow{ContextStartSeq: window.ContextStartSeq, RunIDs: make([]string, len(window.RunIDs))}

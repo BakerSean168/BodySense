@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -248,7 +248,7 @@ func (s *KnowledgeIngestionService) StartWorker(ctx context.Context, interval, s
 		defer ticker.Stop()
 		for {
 			if _, err := s.RecoverJobs(ctx, 10, staleRunningAfter); err != nil {
-				log.Printf("knowledge ingestion recovery failed: %v", err)
+				slog.Default().Error("knowledge_ingestion_recovery_failed", "error", err)
 			}
 			select {
 			case <-ctx.Done():
@@ -269,7 +269,7 @@ func (s *KnowledgeIngestionService) RecoverJobs(ctx context.Context, limit int, 
 		switch job.Status {
 		case "pending":
 			if err := s.processPending(ctx, job.ID); err != nil {
-				log.Printf("knowledge ingestion job %s processing failed: %v", job.ID, err)
+				slog.Default().Error("knowledge_ingestion_job_processing_failed", "job_id", job.ID, "error", err)
 			}
 			processed++
 		case "running":

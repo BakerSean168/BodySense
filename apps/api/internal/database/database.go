@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -68,7 +69,7 @@ func Connect(cfg Config) (*gorm.DB, error) {
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 
 	DB = db
-	log.Println("Database connected successfully")
+	slog.Default().Info("database_connected")
 	return db, nil
 }
 

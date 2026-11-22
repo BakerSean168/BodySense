@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -202,7 +202,7 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 
 	if s.rollout != nil && assessmentRoute != nil {
 		if observeErr := s.rollout.ObserveReport(ctx, userID, *assessmentRoute, report.ID); observeErr != nil {
-			log.Printf("assessment rollout shadow observation failed: %v", observeErr)
+			slog.Default().Warn("assessment_rollout_shadow_observation_failed", "error", observeErr)
 		}
 	}
 	return report, nil

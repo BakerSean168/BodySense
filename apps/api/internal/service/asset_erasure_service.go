@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -82,7 +82,7 @@ func (s *AssetErasureService) Request(ctx context.Context, userID, assetID uuid.
 	}
 	if receipt.Request.Status != model.AssetErasureErased {
 		if err := s.Process(ctx, receipt.Request.ID); err != nil {
-			log.Printf("asset erasure %s left outstanding: %v", receipt.Request.ID, err)
+			slog.Default().Error("asset_erasure_left_outstanding", "request_id", receipt.Request.ID, "error", err)
 		}
 	}
 	return s.store.Receipt(ctx, userID, receipt.Request.ID)
@@ -158,7 +158,7 @@ func (s *AssetErasureService) eraseRuntimeCopies(ctx context.Context, request *m
 	defer cancel()
 	receipt, err := s.runtime.EraseAssetRuntimeCopies(callCtx, request.UserID, request.AssetID, scope)
 	if err != nil {
-		log.Printf("asset erasure %s runtime copies: %v", request.ID, err)
+		slog.Default().Error("asset_erasure_runtime_copies_failed", "request_id", request.ID, "error", err)
 		return unavailable, nil
 	}
 	return scope.Outcome(request.AssetID, receipt), nil
@@ -172,7 +172,7 @@ func (s *AssetErasureService) Recover(ctx context.Context, limit int) (int, erro
 	}
 	for _, id := range ids {
 		if err := s.Process(ctx, id); err != nil {
-			log.Printf("asset erasure recovery %s: %v", id, err)
+			slog.Default().Error("asset_erasure_recovery_failed", "request_id", id, "error", err)
 		}
 	}
 	return len(ids), nil
@@ -188,7 +188,7 @@ func (s *AssetErasureService) StartWorker(ctx context.Context, interval time.Dur
 		defer ticker.Stop()
 		for {
 			if _, err := s.Recover(ctx, 10); err != nil {
-				log.Printf("asset erasure recovery failed: %v", err)
+				slog.Default().Error("asset_erasure_recovery_failed", "error", err)
 			}
 			select {
 			case <-ctx.Done():

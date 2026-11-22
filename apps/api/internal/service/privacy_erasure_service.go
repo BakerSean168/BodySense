@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -136,7 +136,7 @@ func (s *PrivacyErasureService) Request(ctx context.Context, userID uuid.UUID, c
 	}
 	if request.Status != "completed" {
 		if err := s.ProcessRequest(ctx, request.ID); err != nil {
-			log.Printf("privacy erasure request %s queued for retry: %v", request.ID, err)
+			slog.Default().Warn("privacy_erasure_queued_for_retry", "request_id", request.ID, "error", err)
 		}
 	}
 	return s.requests.GetByID(ctx, request.ID)
@@ -203,7 +203,7 @@ func (s *PrivacyErasureService) Recover(ctx context.Context, limit int) (int, er
 	processed := 0
 	for _, id := range ids {
 		if err := s.ProcessRequest(ctx, id); err != nil {
-			log.Printf("privacy erasure recovery %s: %v", id, err)
+			slog.Default().Error("privacy_erasure_recovery_failed", "request_id", id, "error", err)
 		}
 		processed++
 	}
@@ -219,7 +219,7 @@ func (s *PrivacyErasureService) StartWorker(ctx context.Context, interval time.D
 		defer ticker.Stop()
 		for {
 			if _, err := s.Recover(ctx, 10); err != nil {
-				log.Printf("privacy erasure recovery failed: %v", err)
+				slog.Default().Error("privacy_erasure_recovery_failed", "error", err)
 			}
 			select {
 			case <-ctx.Done():

@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/bodysense/api/internal/service"
 	"github.com/google/uuid"
@@ -66,7 +66,7 @@ func (r *Runtime) recordKnowledgeRuntimeObservations(
 		}
 		parsed, err := service.ParseConsultationAnswerAttributionPayload(raw)
 		if err != nil {
-			log.Printf("skip invalid completed answer attribution for run %s: %v", runID, err)
+			slog.Default().Warn("skip_invalid_completed_answer_attribution", "run_id", runID, "error", err)
 			continue
 		}
 		attribution := parsed.Attribution
@@ -181,7 +181,7 @@ func (r *Runtime) recordKnowledgeRuntimeObservation(
 ) {
 	publicationID, err := uuid.Parse(binding.PublicationID)
 	if err != nil {
-		log.Printf("skip runtime knowledge observation with invalid publication id: %v", err)
+		slog.Default().Warn("skip_runtime_knowledge_observation_invalid_publication_id", "error", err)
 		return
 	}
 	seed := attribution.AttributionID + "|" + binding.EvidenceRef
@@ -221,7 +221,7 @@ func (r *Runtime) recordKnowledgeRuntimeObservation(
 		ProvenanceStatus:         "valid",
 		Metadata:                 datatypes.JSON(metadata),
 	}); err != nil {
-		log.Printf("record runtime knowledge observation for run %s: %v", runID, err)
+		slog.Default().Error("record_runtime_knowledge_observation_failed", "run_id", runID, "error", err)
 	}
 }
 

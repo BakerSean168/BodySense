@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/bodysense/api/internal/dto"
@@ -70,7 +70,7 @@ func (r *Runtime) resumeBodyFactInteraction(ctx context.Context, w http.Response
 	sw := r.streamRuntime.NewWriterAfter(w, base, lastSeq)
 	for _, event := range claimed.Events {
 		if err := sw.WriteEvent(ctx, event); err != nil {
-			log.Printf("resume event write failed run=%s seq=%d", run.ID, event.Seq)
+			slog.Default().Error("resume_event_write_failed", "run_id", run.ID, "seq", event.Seq)
 		}
 	}
 	state := streamState{UID: uid, ConversationID: run.ConversationID, TurnID: run.TurnID, Run: run, AssistantMsg: assistant, BaseIDs: base, CurrentPhase: string(session.Phase), AssistantMsgID: assistant.ID.String(), ConversationStr: run.ConversationID.String(), ExpectedConfigurationID: run.AgentConfigurationID,

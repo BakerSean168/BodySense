@@ -3,7 +3,7 @@ package consultation
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -20,7 +20,7 @@ func (r *Runtime) handleExecutionContextDone(ctx context.Context, sw *stream.Str
 	defer cancel()
 	run, err := r.runService.GetRunForUser(terminalCtx, state.Run.ID, state.UID)
 	if err != nil {
-		log.Printf("load terminal run %s after context cancellation: %v", state.Run.ID, err)
+		slog.Default().Error("load_terminal_run_failed", "run_id", state.Run.ID, "error", err)
 		return
 	}
 	if run != nil && run.Status == model.RunStatusCancelled {
@@ -64,25 +64,25 @@ func (r *Runtime) reattachActiveRun(ctx context.Context, w http.ResponseWriter, 
 	for {
 		events, hasMore, err := r.runtimeEventService.ListRunEvents(ctx, run.ConversationID, run.ID, afterSeq, batchSize)
 		if err != nil {
-			log.Printf("consultation transport reattach list failed run_id=%s after_seq=%d: %v", run.ID, afterSeq, err)
+			slog.Default().Error("consultation_transport_reattach_list_failed", "run_id", run.ID, "after_seq", afterSeq, "error", err)
 			return
 		}
 
 		for _, stored := range events {
 			event, err := storedRuntimeEventToStreamEvent(stored)
 			if err != nil {
-				log.Printf("consultation transport reattach decode failed run_id=%s seq=%d: %v", run.ID, stored.Seq, err)
+				slog.Default().Warn("consultation_transport_reattach_decode_failed", "run_id", run.ID, "seq", stored.Seq, "error", err)
 				continue
 			}
 			if err := sw.WriteEvent(ctx, event); err != nil {
-				log.Printf("consultation transport reattach disconnected run_id=%s seq=%d: %v", run.ID, stored.Seq, err)
+				slog.Default().Warn("consultation_transport_reattach_disconnected", "run_id", run.ID, "seq", stored.Seq, "error", err)
 				return
 			}
 			if stored.Seq > afterSeq {
 				afterSeq = stored.Seq
 			}
 			if stored.Type == "stream.done" {
-				log.Printf("consultation transport reattach completed run_id=%s last_seq=%d", run.ID, afterSeq)
+				slog.Default().Info("consultation_transport_reattach_completed", "run_id", run.ID, "last_seq", afterSeq)
 				return
 			}
 		}
@@ -93,7 +93,7 @@ func (r *Runtime) reattachActiveRun(ctx context.Context, w http.ResponseWriter, 
 
 		select {
 		case <-ctx.Done():
-			log.Printf("consultation transport reattach request closed run_id=%s last_seq=%d: %v", run.ID, afterSeq, ctx.Err())
+			slog.Default().Info("consultation_transport_reattach_request_closed", "run_id", run.ID, "last_seq", afterSeq, "error", ctx.Err())
 			return
 		case <-ticker.C:
 		}
@@ -126,7 +126,7 @@ func (r *Runtime) replayCompletedRun(ctx context.Context, w http.ResponseWriter,
 	events, err := r.runtimeEventService.ListAllRunEvents(ctx, run.ConversationID, run.ID)
 	if err != nil || len(events) == 0 {
 		if err != nil {
-			log.Printf("failed to replay runtime events for run %s: %v", run.ID, err)
+			slog.Default().Error("replay_runtime_events_failed", "run_id", run.ID, "error", err)
 		}
 		r.sendNewEvent(
 			ctx,
@@ -147,7 +147,7 @@ func (r *Runtime) replayCompletedRun(ctx context.Context, w http.ResponseWriter,
 	for _, stored := range events {
 		event, err := storedRuntimeEventToStreamEvent(stored)
 		if err != nil {
-			log.Printf("failed to decode runtime event ids for run %s seq %d: %v", run.ID, stored.Seq, err)
+			slog.Default().Error("decode_runtime_event_ids_failed", "run_id", run.ID, "seq", stored.Seq, "error", err)
 			continue
 		}
 		if stored.Seq > maxSeq {
@@ -158,7 +158,7 @@ func (r *Runtime) replayCompletedRun(ctx context.Context, w http.ResponseWriter,
 		}
 
 		if err := sw.WriteEvent(ctx, event); err != nil {
-			log.Printf("failed to write replayed event for run %s seq %d: %v", run.ID, stored.Seq, err)
+			slog.Default().Error("write_replayed_event_failed", "run_id", run.ID, "seq", stored.Seq, "error", err)
 			return
 		}
 	}
@@ -174,7 +174,7 @@ func (r *Runtime) replayCompletedRun(ctx context.Context, w http.ResponseWriter,
 		IDs:     baseIDs,
 		Payload: json.RawMessage(`{}`),
 	}); err != nil {
-		log.Printf("failed to write replay done for run %s: %v", run.ID, err)
+		slog.Default().Error("write_replay_done_failed", "run_id", run.ID, "error", err)
 	}
 }
 
@@ -183,7 +183,7 @@ func (r *Runtime) clearActiveRun(ctx context.Context, conversationID, userID uui
 		return
 	}
 	if err := r.conversationService.UpdateActiveRunID(ctx, conversationID, userID, nil, ""); err != nil {
-		log.Printf("failed to clear active_run_id for conversation %s: %v", conversationID, err)
+		slog.Default().Error("clear_active_run_id_failed", "conversation_id", conversationID, "error", err)
 	}
 	// Every path that ends a Run (completed, failed, cancelled, parked on Ask
 	// User) clears it here after its messages reached their final status, so
@@ -199,7 +199,7 @@ func (r *Runtime) refreshThreadProjection(ctx context.Context, conversationID, u
 	}
 
 	if _, _, _, _, _, err := r.threadProjectionService.RefreshAndGetThread(ctx, conversationID, userID); err != nil {
-		log.Printf("failed to refresh thread projection for conversation %s: %v", conversationID, err)
+		slog.Default().Error("refresh_thread_projection_failed", "conversation_id", conversationID, "error", err)
 	}
 }
 
@@ -250,7 +250,7 @@ func (r *Runtime) failRunAndEmit(
 		message = "stream failed"
 	}
 	if r.runService == nil || state.Run == nil || state.AssistantMsg == nil {
-		log.Printf("cannot fail consultation run atomically: lifecycle dependencies are missing")
+		slog.Default().Error("fail_consultation_run_missing_lifecycle_dependencies")
 		return
 	}
 
@@ -266,7 +266,7 @@ func (r *Runtime) failRunAndEmit(
 		"",
 	)
 	if err != nil {
-		log.Printf("failed to build run.failed event for run %s: %v", state.Run.ID, err)
+		slog.Default().Error("build_run_failed_event_failed", "run_id", state.Run.ID, "error", err)
 		return
 	}
 
@@ -278,7 +278,7 @@ func (r *Runtime) failRunAndEmit(
 		runFailedEvent,
 	)
 	if err != nil {
-		log.Printf("failed to atomically fail run %s: %v", state.Run.ID, err)
+		slog.Default().Error("atomically_fail_run_failed", "run_id", state.Run.ID, "error", err)
 		return
 	}
 	if !committed {
@@ -290,7 +290,7 @@ func (r *Runtime) failRunAndEmit(
 	}
 
 	if err := sw.WriteEvent(ctx, runFailedEvent); err != nil {
-		log.Printf("SSE write error type=run.failed run_id=%s conversation_id=%s seq=%d: %v", state.Run.ID, state.ConversationID, runFailedEvent.Seq, err)
+		slog.Default().Warn("sse_write_error", "event_type", "run.failed", "run_id", state.Run.ID, "conversation_id", state.ConversationID, "seq", runFailedEvent.Seq, "error", err)
 	}
 	r.sendNewEvent(
 		ctx,

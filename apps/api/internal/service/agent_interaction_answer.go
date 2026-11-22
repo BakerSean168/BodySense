@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/bodysense/api/internal/dto"
@@ -43,7 +43,7 @@ func (s *AgentInteractionService) ResumeInteraction(
 	// Soft-expire if the TTL elapsed but the sweeper has not yet run.
 	if interaction.ExpiresAt != nil && !interaction.ExpiresAt.After(time.Now().UTC()) {
 		if won, expErr := s.repo.ExpirePending(ctx, interactionID); expErr != nil {
-			log.Printf("failed to expire interaction %s: %v", interactionID, expErr)
+			slog.Default().Error("expire_interaction_failed", "interaction_id", interactionID, "error", expErr)
 		} else if won {
 			s.settled(ctx, *interaction)
 		}

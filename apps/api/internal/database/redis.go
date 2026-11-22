@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 
 	"github.com/redis/go-redis/v9"
@@ -55,6 +55,6 @@ func ConnectRedis(cfg RedisConfig) (*redis.Client, error) {
 	}
 
 	RedisClient = client
-	log.Println("Redis connected successfully")
+	slog.Default().Info("redis_connected")
 	return client, nil
 }

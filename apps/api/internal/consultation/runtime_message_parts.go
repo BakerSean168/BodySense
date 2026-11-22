@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"sort"
 	"strings"
 
@@ -80,12 +80,12 @@ func (r *Runtime) resolveConsultationImages(
 	for _, rawID := range ids {
 		uploadID, err := uuid.Parse(rawID)
 		if err != nil {
-			log.Printf("consultation image upload_id invalid %q: %v", rawID, err)
+			slog.Default().Warn("consultation_image_upload_id_invalid", "upload_id", rawID, "error", err)
 			continue
 		}
 		dataURL, mime, err := r.uploadService.ReadImageDataURL(ctx, uid, uploadID)
 		if err != nil {
-			log.Printf("consultation image resolve %s: %v", uploadID, err)
+			slog.Default().Error("consultation_image_resolve_failed", "upload_id", uploadID, "error", err)
 			continue
 		}
 		out = append(out, service.ConsultationImageRef{

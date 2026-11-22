@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/bodysense/api/internal/model"
@@ -145,7 +145,7 @@ func (s *ChatRetentionService) OnRunSettled(ctx context.Context, owner uuid.UUID
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
 	if _, _, err := s.ReconcileWindow(ctx, owner); err != nil && !errors.Is(err, model.ErrRetentionNotFound) {
-		log.Printf("chat retention window reconcile for user %s: %v", owner, err)
+		slog.Default().Error("chat_retention_window_reconcile_failed", "user_id", owner, "error", err)
 	}
 }
 
@@ -158,7 +158,7 @@ func (s *ChatRetentionService) OnConversationSettled(ctx context.Context, conver
 	owner, err := s.repo.OwnerOf(ctx, conversationID)
 	if err != nil {
 		if !errors.Is(err, model.ErrRetentionNotFound) {
-			log.Printf("chat retention owner of conversation %s: %v", conversationID, err)
+			slog.Default().Error("chat_retention_owner_lookup_failed", "conversation_id", conversationID, "error", err)
 		}
 		return
 	}
@@ -207,7 +207,7 @@ func (s *ChatRetentionService) prune(ctx context.Context, owner, jobID uuid.UUID
 			}
 			if err := s.repo.RecordPruneEvent(context.WithoutCancel(ctx), receipt.JobID,
 				"episodic.distillation", payload); err != nil {
-				log.Printf("episodic distillation job event for conversation %s: %v", plan.ConversationID, err)
+				slog.Default().Error("episodic_distillation_job_event_failed", "conversation_id", plan.ConversationID, "error", err)
 			}
 		}
 	}
@@ -250,7 +250,7 @@ func (s *ChatRetentionService) StartPruneWorker(ctx context.Context, pollInterva
 		defer ticker.Stop()
 		for {
 			if _, err := s.RunPendingPrunes(ctx, 10, staleRunningAfter); err != nil && ctx.Err() == nil {
-				log.Printf("chat retention prune worker: %v", err)
+				slog.Default().Error("chat_retention_prune_worker_failed", "error", err)
 			}
 			select {
 			case <-ctx.Done():

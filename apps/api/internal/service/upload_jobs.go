@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/bodysense/api/internal/model"
@@ -37,7 +37,7 @@ func (s *UploadService) StartUploadWorker(ctx context.Context, pollInterval, sta
 
 		for {
 			if _, err := s.RecoverUploadJobs(ctx, 10, staleRunningAfter); err != nil {
-				log.Printf("upload job recovery failed: %v", err)
+				slog.Default().Error("upload_job_recovery_failed", "error", err)
 			}
 
 			select {
@@ -82,12 +82,12 @@ func (s *UploadService) RecoverUploadJobs(ctx context.Context, limit int, staleR
 			switch job.Status {
 			case "pending":
 				if err := jt.process(ctx, job); err != nil {
-					log.Printf("failed to process %s job %s: %v", jt.name, job.ID, err)
+					slog.Default().Error("process_job_failed", "job_type", jt.name, "job_id", job.ID, "error", err)
 				}
 				processed++
 			case "running":
 				if err := jt.timeout(ctx, job); err != nil {
-					log.Printf("failed to timeout stale %s job %s: %v", jt.name, job.ID, err)
+					slog.Default().Error("timeout_stale_job_failed", "job_type", jt.name, "job_id", job.ID, "error", err)
 				}
 				processed++
 			}
