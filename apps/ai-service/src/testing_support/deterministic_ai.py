@@ -8,19 +8,16 @@ structured-output and governance paths.
 
 from __future__ import annotations
 
-import os
 from typing import Any, Literal
 
 from pydantic_ai.models import Model
 from pydantic_ai.models.test import TestModel
 
+from .. import settings
 from ..services.assessment_evidence import build_assessment_evidence_catalog
 
-_TRUE_VALUES = {"1", "true", "yes", "on"}
-
-
 def deterministic_ai_enabled() -> bool:
-    return os.getenv("BODYSENSE_DETERMINISTIC_AI", "").strip().lower() in _TRUE_VALUES
+    return settings.deterministic_ai_enabled()
 
 
 def deterministic_diagnosis_model(*, call_tools: list[str] | Literal["all"] = "all") -> Model:
