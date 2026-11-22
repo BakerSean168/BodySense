@@ -9,7 +9,6 @@ that needs it so production never loads the test support modules.
 from __future__ import annotations
 
 import asyncio
-import os
 from collections.abc import AsyncIterator
 from typing import Any
 from uuid import NAMESPACE_URL, UUID, uuid5
@@ -28,6 +27,7 @@ from ...models.consultation_runtime_event import (
     ToolResultRuntimeEvent,
 )
 from ...runtime.consultation_thread import get_consultation_manifest
+from ...settings import e2e_stub_ai_enabled
 from ..runtime_proto_adapter import serialize_runtime_event
 from .runtime_schemas import ResumeInterruptRequest, StartTurnRequest
 
@@ -63,12 +63,7 @@ def _e2e_intake_tool_id(run_id: str, answer: dict[str, Any]) -> str:
 
 
 def _e2e_stub_enabled() -> bool:
-    environment = os.getenv("ENVIRONMENT", "development").lower()
-    return os.getenv("BODYSENSE_E2E_STUB_AI") == "1" and environment in {
-        "development",
-        "test",
-        "e2e",
-    }
+    return e2e_stub_ai_enabled()
 
 
 def _stub_event(
