@@ -389,7 +389,7 @@ def test_rapidocr_tiny_candidate_identity_is_stable_and_model_distinct() -> None
     tiny = rapidocr_ppocrv6_tiny.load_rapidocr_tiny_config()
     small = load_rapidocr_bounded_config()
     assert tiny.candidate_id == "rapidocr-ppocrv6-tiny-v1"
-    assert tiny.configuration_id == "hdex-config-f4911e8b12684272"
+    assert tiny.configuration_id == "hdex-config-1cfadd6c91f1c809"
     assert tiny.configuration_id != small.configuration_id
     assert tiny.model_family == "PP-OCRv6"
     assert tiny.model_type == "tiny"
