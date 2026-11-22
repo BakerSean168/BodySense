@@ -27,6 +27,18 @@ from src.runtime.erasure import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _fake_db_password(monkeypatch: pytest.MonkeyPatch):
+    """Give the route tests a password so the app lifespan can build a DB URL.
+
+    The unified fail-fast settings module refuses to assemble a database URL
+    without credentials; the route tests below never touch Postgres, they only
+    need the lifespan's checkpointer bootstrap to get past URL assembly
+    (where an unreachable DB falls back to the InMemorySaver test opt-in).
+    """
+    monkeypatch.setenv("DB_PASSWORD", "test-only-password")
+
+
 class TurnState(TypedDict, total=False):
     run_id: str
     current_user_message: str
