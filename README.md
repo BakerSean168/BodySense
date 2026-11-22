@@ -141,7 +141,7 @@ Go auto-restart uses [Air](https://github.com/air-verse/air) (`GOBIN="$HOME/.loc
 
 To discard **only** the dedicated BodySense development database, first stop the application session, then run `bash scripts/dev-tmux.sh reset-db`. It validates the Compose project, loopback port, database name and active connections before dropping/recreating the empty database. Starting the Go API then initializes the current schema from the repository baseline; no old rows are migrated. This does **not** affect production or other projects. Do not run it while feature processes use the same database.
 
-From a local workstation, use `ssh -N -L 20100:127.0.0.1:20100 oracle2` and open <http://127.0.0.1:20100>; the Vite `/api` proxy forwards requests to Go. No public ingress is required.
+When the dev stack runs on a remote host, use `ssh -N -L 20100:127.0.0.1:20100 <dev-host>` from your workstation and open <http://127.0.0.1:20100>; when it runs on your own machine, open the same address directly. The Vite `/api` proxy forwards requests to Go. No public ingress is required.
 
 Run a single surface when you do not need the full stack:
 
