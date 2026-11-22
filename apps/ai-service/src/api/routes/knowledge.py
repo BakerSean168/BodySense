@@ -1,7 +1,6 @@
 """Knowledge library API routes."""
 
 import hashlib
-import os
 from pathlib import Path
 from typing import Any, Literal, Optional
 
@@ -13,10 +12,11 @@ from ...rag import (
     VideoIngestionRequest,
     get_knowledge_library,
 )
+from ...settings import knowledge_data_root
 
 # Allowed data root for video ingestion (path traversal defense)
 _DEFAULT_DATA_ROOT = Path(__file__).resolve().parents[3] / "data"
-_DATA_ROOT = Path(os.getenv("KNOWLEDGE_DATA_ROOT", str(_DEFAULT_DATA_ROOT))).resolve()
+_DATA_ROOT = Path(knowledge_data_root(str(_DEFAULT_DATA_ROOT))).resolve()
 
 router = APIRouter(prefix="/api/knowledge", tags=["knowledge"])
 
