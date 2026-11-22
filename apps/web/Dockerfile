@@ -16,7 +16,6 @@ RUN pnpm config set registry ${NPM_REGISTRY}
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/web/package.json apps/web/
 COPY packages/contracts/package.json packages/contracts/
-COPY packages/utils/package.json packages/utils/
 
 RUN pnpm install --no-frozen-lockfile
 

@@ -537,14 +537,6 @@ function classifySinglePath(path) {
     };
   }
 
-  if (path.startsWith("packages/utils/")) {
-    return {
-      risk: "root",
-      lanes: allTrueLanes(),
-      reason: "shared-utility-fail-safe",
-    };
-  }
-
   if (
     path.startsWith("scripts/static-assets/") ||
     path.startsWith("scripts/anatomy/")
