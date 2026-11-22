@@ -263,11 +263,12 @@ export function createBodySenseViteConfig({
           },
         },
       },
-      // BodyExplorer3D is intentionally isolated behind React.lazy. Vite's generic
-      // warning cannot express that exception, so the custom plugin above keeps a
-      // 500 kB default budget for every other chunk and a tighter raw+gzip budget
-      // for the lazy 3D viewer itself.
-      chunkSizeWarningLimit: 1300,
+      // The custom plugin above enforces the real budgets (500 kB default,
+      // explicit raw+gzip budgets for the lazy 3D chunks). This warning limit
+      // only needs to sit just above the largest measured chunk so genuine
+      // growth still warns: measured 2026-11-23, Body3DThreeRuntime is
+      // 718,447 bytes and every other chunk is at most 427,522 bytes.
+      chunkSizeWarningLimit: 750,
     },
     server: {
       ...(allowedHosts.length > 0 ? { allowedHosts } : {}),
