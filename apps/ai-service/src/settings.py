@@ -12,6 +12,13 @@ from urllib.parse import quote_plus
 
 __all__ = [
     "DatabaseSettingsError",
+    "asr_api_key",
+    "asr_omni_base_url",
+    "asr_omni_model",
+    "asr_provider",
+    "asr_transcription_base_url",
+    "asr_transcription_model",
+    "asr_whisper_model",
     "build_database_url",
     "embedding_api_key",
     "embedding_base_url",
@@ -121,3 +128,48 @@ def local_embedding_max_concurrency(*, env: dict[str, str] | None = None) -> int
     """Worker-thread cap for local transformer inference (at least 1)."""
     lookup = os.environ if env is None else env
     return max(1, int(lookup.get("LOCAL_EMBEDDING_MAX_CONCURRENCY", "2")))
+
+
+def asr_provider(*, env: dict[str, str] | None = None) -> str:
+    """ASR provider selector ("whisper.cpp" by default)."""
+    lookup = os.environ if env is None else env
+    return lookup.get("ASR_PROVIDER", "whisper.cpp")
+
+
+def asr_whisper_model(*, env: dict[str, str] | None = None) -> str:
+    """whisper.cpp model file name ("ggml-base.bin" by default)."""
+    lookup = os.environ if env is None else env
+    return lookup.get("ASR_WHISPER_MODEL", "ggml-base.bin")
+
+
+def asr_api_key(*, env: dict[str, str] | None = None) -> str | None:
+    """API key for the remote ASR endpoints.
+
+    ASR_API_KEY wins; OPENAI_API_KEY is the legacy fallback.
+    """
+    lookup = os.environ if env is None else env
+    return lookup.get("ASR_API_KEY") or lookup.get("OPENAI_API_KEY")
+
+
+def asr_transcription_base_url(*, env: dict[str, str] | None = None) -> str | None:
+    """Base URL of the OpenAI-compatible audio transcription endpoint."""
+    lookup = os.environ if env is None else env
+    return lookup.get("ASR_API_BASE_URL")
+
+
+def asr_transcription_model(*, env: dict[str, str] | None = None) -> str:
+    """Model name for the OpenAI-compatible transcription endpoint."""
+    lookup = os.environ if env is None else env
+    return lookup.get("ASR_API_MODEL", "mimo-v2.5-asr")
+
+
+def asr_omni_base_url(*, env: dict[str, str] | None = None) -> str:
+    """Base URL of the MiMo omni chat-completions ASR endpoint."""
+    lookup = os.environ if env is None else env
+    return lookup.get("ASR_API_BASE_URL", "https://token-plan-cn.xiaomimimo.com/v1")
+
+
+def asr_omni_model(*, env: dict[str, str] | None = None) -> str:
+    """Model name for the MiMo omni chat-completions ASR endpoint."""
+    lookup = os.environ if env is None else env
+    return lookup.get("ASR_API_MODEL", "mimo-v2.5")
