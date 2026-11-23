@@ -34,6 +34,7 @@ __all__ = [
     "gateway_api_key",
     "gateway_base_url",
     "health_document_model_root",
+    "internal_token",
     "knowledge_data_root",
     "knowledge_pool_max_size",
     "knowledge_pool_min_size",
@@ -303,3 +304,16 @@ def tessdata_prefix(*, env: dict[str, str] | None = None) -> str:
     """Tesseract data directory override (empty when unset)."""
     lookup = os.environ if env is None else env
     return lookup.get("TESSDATA_PREFIX", "").strip()
+
+
+def internal_token(*, env: dict[str, str] | None = None) -> str | None:
+    """Shared token authenticating inbound internal callers, if configured.
+
+    AI_SERVICE_INTERNAL_TOKEN has no default. While it is unset the HTTP
+    APIs run unauthenticated (the previous behaviour) so a deployment can
+    roll the token onto both ends in any order; both apps log a startup
+    warning in that state. The Go API reads the same variable and sends
+    the value as the X-Internal-Token header on every ai-service call.
+    """
+    lookup = os.environ if env is None else env
+    return lookup.get("AI_SERVICE_INTERNAL_TOKEN", "").strip() or None
