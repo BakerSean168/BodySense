@@ -78,9 +78,9 @@ export async function loadPinnedReferenceAtlasSurface(
 }
 
 /**
- * Full-body muscular layer (≈6.6 MB): superficial and intermediate muscles plus
- * tendons from Z-Anatomy (CC BY-SA 4.0), exported for BodySense in the same
- * coordinate space as Atlas 1.4.0 (whose own `muscular` bundle has no limb
+ * Full-body muscular layer (≈2.3 MB, Meshopt-compressed): superficial and
+ * intermediate muscles plus tendons from Z-Anatomy (CC BY-SA 4.0), exported
+ * for BodySense in the same coordinate space as Atlas 1.4.0 (whose own `muscular` bundle has no limb
  * muscles). Nodes are named `<structure>__muscle` / `<structure>__tendon`.
  * Loaded after the skin so the body paints first.
  *
