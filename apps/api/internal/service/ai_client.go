@@ -56,6 +56,7 @@ type AIClient struct {
 	httpClient    *http.Client
 	baseURL       string
 	internalToken string
+	retryPolicy   aiRetryPolicy
 }
 
 // AIServiceHTTPError preserves upstream status semantics so application services
@@ -212,6 +213,7 @@ func newAIClient(baseURL string, timeout time.Duration) *AIClient {
 		httpClient:    &http.Client{Timeout: timeout},
 		baseURL:       baseURL,
 		internalToken: config.EnvOr(aiServiceInternalTokenEnv, ""),
+		retryPolicy:   defaultAIRetryPolicy,
 	}
 }
 

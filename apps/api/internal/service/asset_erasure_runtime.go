@@ -33,7 +33,7 @@ func (c *AIClient) EraseAssetRuntimeCopies(ctx context.Context, userID, assetID 
 		ContentSHA256:     scope.ContentSHA256,
 		ThreadIDs:         uuidStrings(scope.ThreadIDs),
 		AttachedThreadIDs: uuidStrings(scope.AttachedThreadIDs),
-	})
+	}, true) // Dedup-keyed erasure (classification (b)): retried.
 	if err != nil {
 		return nil, err
 	}

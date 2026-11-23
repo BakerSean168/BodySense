@@ -53,7 +53,11 @@ func (c *AIClient) CleanupConsultationCheckpoints(
 	for i, id := range runIDs {
 		req.PrunedRunIDs[i] = id.String()
 	}
-	raw, err := c.callJSON(ctx, "/runtime/threads/"+conversationID.String()+"/checkpoints/cleanup", req)
+	// Never retried at this layer: the prune job owns a durable retry
+	// budget and pins exactly one cleanup call per job attempt
+	// (TestChatRetentionPruneJobRetriesFailedCleanupPostgres). The
+	// endpoint idempotency is what makes those job-level retries safe.
+	raw, err := c.callJSON(ctx, "/runtime/threads/"+conversationID.String()+"/checkpoints/cleanup", req, false)
 	if err != nil {
 		return nil, err
 	}
