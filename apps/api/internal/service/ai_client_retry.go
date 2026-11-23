@@ -16,16 +16,19 @@ import (
 //
 //   - (a) idempotent reads: knowledge search and knowledge stats;
 //   - (b) writes carrying a dedup identity: runtime erasures (keyed by
-//     the resource id in the path plus the content fingerprint),
-//     checkpoint cleanup (the ai-service documents a repeat with the
-//     same prune set as a no-op), and video ingestion (pinned by source
-//     key and expected content hash).
+//     the resource id in the path plus the content fingerprint) and
+//     video ingestion (pinned by source key and expected content
+//     hash).
 //
 // Unkeyed generation/upload calls (assessment, diagnosis, treatment,
 // episodic-shadow proposals, OCR, posture) and the streaming
 // consultation turns never retry: a replay could double-spend the free
 // model quota or duplicate a side effect, and their callers own the
-// retry decision at the job layer.
+// retry decision at the job layer. Checkpoint cleanup is likewise
+// excluded although its endpoint is idempotent: the chat-retention
+// prune job owns a durable retry budget that pins exactly one HTTP
+// call per job attempt, and the endpoint idempotency is what makes
+// those job-level retries safe.
 
 // aiRetryPolicy bounds the retry behaviour of one logical call.
 type aiRetryPolicy struct {
