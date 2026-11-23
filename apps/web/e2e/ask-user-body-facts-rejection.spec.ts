@@ -1,5 +1,20 @@
 import { expect, test } from "@playwright/test";
 
+import {
+  anotherOwner,
+  api,
+  getJSON,
+  register,
+  startAsk,
+} from "./support/askUserBodyFacts";
+
+import { requiresDeterministicModel } from "./support/consultation";
+
+test.describe.configure({ timeout: 100_000 });
+
+// A real model decides its own reply, so this cannot be seeded through the API.
+requiresDeterministicModel();
+
 test("Ask User rejects foreign owners, forged choices and cancelled answers without creating facts", async ({
   page,
   request,
