@@ -38,6 +38,7 @@ func (c *AIClient) callJSON(ctx context.Context, path string, req any) (json.Raw
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	c.setInternalAuthHeader(httpReq)
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
@@ -90,6 +91,7 @@ func (c *AIClient) ExtractHealthDocument(reader io.Reader, mimeType, configurati
 		return nil, err
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
+	c.setInternalAuthHeader(req)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to health-document service: %w", err)
@@ -138,6 +140,7 @@ func (c *AIClient) AnalyzePosture(reader io.Reader, mimeType, view, configuratio
 		return nil, err
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
+	c.setInternalAuthHeader(req)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to AI service: %w", err)
@@ -168,6 +171,7 @@ func (c *AIClient) SearchKnowledge(ctx context.Context, input KnowledgeSearchReq
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	c.setInternalAuthHeader(req)
 	var response KnowledgeSearchResponse
 	if err := c.decodeKnowledgeJSON(req, &response); err != nil {
 		return nil, err
@@ -184,6 +188,7 @@ func (c *AIClient) KnowledgeStats(ctx context.Context) (*KnowledgeStats, error) 
 	if err != nil {
 		return nil, err
 	}
+	c.setInternalAuthHeader(req)
 	var response KnowledgeStats
 	if err := c.decodeKnowledgeJSON(req, &response); err != nil {
 		return nil, err
@@ -221,6 +226,7 @@ func (c *AIClient) IngestKnowledgeVideo(ctx context.Context, payload any) ([]byt
 		return nil, 0, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	c.setInternalAuthHeader(req)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, 0, err

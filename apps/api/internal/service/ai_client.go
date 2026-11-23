@@ -53,8 +53,9 @@ type AssessmentGenerationRequest struct {
 }
 
 type AIClient struct {
-	httpClient *http.Client
-	baseURL    string
+	httpClient    *http.Client
+	baseURL       string
+	internalToken string
 }
 
 // AIServiceHTTPError preserves upstream status semantics so application services
@@ -208,8 +209,30 @@ func newAIClient(baseURL string, timeout time.Duration) *AIClient {
 		baseURL = "http://localhost:8100"
 	}
 	return &AIClient{
-		httpClient: &http.Client{Timeout: timeout},
-		baseURL:    baseURL,
+		httpClient:    &http.Client{Timeout: timeout},
+		baseURL:       baseURL,
+		internalToken: config.EnvOr(aiServiceInternalTokenEnv, ""),
+	}
+}
+
+const (
+	// aiServiceInternalTokenEnv names the shared token the Go API
+	// presents to the ai-service on every outbound call (R2-02/#625).
+	// The Python side reads the same variable (src/settings.py) and,
+	// once it is configured there, rejects calls that do not carry it.
+	aiServiceInternalTokenEnv = "AI_SERVICE_INTERNAL_TOKEN"
+	// internalTokenHeader is the request header carrying the token.
+	internalTokenHeader = "X-Internal-Token"
+)
+
+// setInternalAuthHeader attaches the shared internal token to one
+// outbound ai-service request. Every AIClient request path calls it, so
+// no call site can forget the header. When no token is configured the
+// request goes out without the header, matching the ai-service's
+// backward-compatible unconfigured mode.
+func (c *AIClient) setInternalAuthHeader(req *http.Request) {
+	if c.internalToken != "" {
+		req.Header.Set(internalTokenHeader, c.internalToken)
 	}
 }
 
@@ -258,6 +281,7 @@ func (c *AIClient) streamNDJSON(
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	c.setInternalAuthHeader(httpReq)
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
