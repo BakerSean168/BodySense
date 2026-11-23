@@ -24,6 +24,7 @@ for _env_path in _env_paths:
         load_dotenv(_env_path, override=False)
         break
 
+from .api.internal_auth import InternalTokenMiddleware, log_auth_configuration  # noqa: E402
 from .api.routes import (  # noqa: E402
     assessment,
     diagnosis,
@@ -41,6 +42,7 @@ from .settings import cors_origins  # noqa: E402
 
 @asynccontextmanager
 async def app_lifespan(_: FastAPI):
+    log_auth_configuration("AI service")
     async with runtime_checkpointer_lifespan(), knowledge_library_lifespan():
         yield
 
@@ -51,14 +53,20 @@ app = FastAPI(
     lifespan=app_lifespan,
 )
 
-# CORS middleware
+# Internal caller authentication (R2-02/#625). Added before CORS so the
+# CORS middleware stays outermost and still answers preflight requests;
+# the token check then guards every business route (api/internal_auth.py).
+app.add_middleware(InternalTokenMiddleware)
+
+# CORS middleware. Origins come from CORS_ORIGINS; methods and headers
+# are the explicit set the API surface uses instead of wildcards.
 _cors_origins = cors_origins()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in _cors_origins],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Internal-Token"],
 )
 
 # Include routers

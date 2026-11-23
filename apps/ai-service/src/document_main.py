@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
+from .api.internal_auth import InternalTokenMiddleware, log_auth_configuration
 from .api.routes.ocr import router as ocr_router
 
 app = FastAPI(
@@ -18,6 +19,9 @@ app = FastAPI(
     redoc_url=None,
     openapi_url=None,
 )
+
+app.add_middleware(InternalTokenMiddleware)
+log_auth_configuration("Health document runtime")
 
 
 @app.get("/health")
