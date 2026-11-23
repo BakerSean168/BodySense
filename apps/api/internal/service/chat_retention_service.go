@@ -53,7 +53,9 @@ func (c *AIClient) CleanupConsultationCheckpoints(
 	for i, id := range runIDs {
 		req.PrunedRunIDs[i] = id.String()
 	}
-	raw, err := c.callJSON(ctx, "/runtime/threads/"+conversationID.String()+"/checkpoints/cleanup", req)
+	// The ai-service documents cleanup with the same prune set as
+	// idempotent (classification (b)): retried.
+	raw, err := c.callJSON(ctx, "/runtime/threads/"+conversationID.String()+"/checkpoints/cleanup", req, true)
 	if err != nil {
 		return nil, err
 	}

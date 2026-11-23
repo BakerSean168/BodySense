@@ -42,7 +42,9 @@ func (p *EpisodicShadowHTTPProposer) ProposeEpisodicShadowQuote(
 	if err != nil {
 		return EpisodicShadowProposalResponse{}, episodicProposalFailure(err)
 	}
-	raw, err := p.client.callJSON(ctx, episodicShadowProposalPath, json.RawMessage(body))
+	// Unkeyed generation (classification (c)): never retried; the
+	// caller's trigger owns the retry decision.
+	raw, err := p.client.callJSON(ctx, episodicShadowProposalPath, json.RawMessage(body), false)
 	if err != nil {
 		return EpisodicShadowProposalResponse{}, episodicProposalFailure(err)
 	}

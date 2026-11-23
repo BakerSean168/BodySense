@@ -197,7 +197,7 @@ func (c *AIClient) EraseStatementRuntimeCopies(ctx context.Context, userID, stat
 		ThreadIDs:         uuidStrings(scope.ThreadIDs),
 		AttachedThreadIDs: uuidStrings(scope.AttachedThreadIDs),
 		RecordIDs:         uuidStrings(scope.RecordIDs),
-	})
+	}, true) // Dedup-keyed erasure (classification (b)): retried.
 	if err != nil {
 		return nil, err
 	}

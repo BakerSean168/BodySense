@@ -13,34 +13,43 @@ import (
 
 // GenerateAssessment calls the typed observation-only Assessment Agent.
 func (c *AIClient) GenerateAssessment(ctx context.Context, req AssessmentGenerationRequest) (json.RawMessage, error) {
-	return c.callJSON(ctx, "/api/assessment/generate", req)
+	// Unkeyed generation (classification (c)): never retried.
+	return c.callJSON(ctx, "/api/assessment/generate", req, false)
 }
 
 // AnalyzeDiagnosis calls /api/diagnosis/analyze.
 func (c *AIClient) AnalyzeDiagnosis(ctx context.Context, req DiagnosisRequest) (json.RawMessage, error) {
-	return c.callJSON(ctx, "/api/diagnosis/analyze", req)
+	// Unkeyed generation (classification (c)): never retried.
+	return c.callJSON(ctx, "/api/diagnosis/analyze", req, false)
 }
 
 // RecommendTreatment calls the typed Treatment Agent. The result is a proposal;
 // only Go can accept it into the durable current Treatment aggregate.
 func (c *AIClient) RecommendTreatment(ctx context.Context, req TreatmentRecommendationRequest) (json.RawMessage, error) {
-	return c.callJSON(ctx, "/api/treatment/recommend", req)
+	// Unkeyed generation (classification (c)): never retried.
+	return c.callJSON(ctx, "/api/treatment/recommend", req, false)
 }
 
-func (c *AIClient) callJSON(ctx context.Context, path string, req any) (json.RawMessage, error) {
+func (c *AIClient) callJSON(
+	ctx context.Context,
+	path string,
+	req any,
+	retryable bool,
+) (json.RawMessage, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+path, bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	c.setInternalAuthHeader(httpReq)
-
-	resp, err := c.httpClient.Do(httpReq)
+	resp, err := c.doRetryable(ctx, path, retryable, func() (*http.Request, error) {
+		httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+path, bytes.NewReader(body))
+		if err != nil {
+			return nil, fmt.Errorf("create request: %w", err)
+		}
+		httpReq.Header.Set("Content-Type", "application/json")
+		c.setInternalAuthHeader(httpReq)
+		return httpReq, nil
+	})
 	if err != nil {
 		return nil, fmt.Errorf("call AI service: %w", err)
 	}
@@ -197,7 +206,11 @@ func (c *AIClient) KnowledgeStats(ctx context.Context) (*KnowledgeStats, error) 
 }
 
 func (c *AIClient) decodeKnowledgeJSON(req *http.Request, target any) error {
-	resp, err := c.httpClient.Do(req)
+	// Knowledge search/stats are idempotent reads (classification (a)),
+	// so the shared retry policy applies.
+	resp, err := c.doRetryable(req.Context(), req.URL.Path, true, func() (*http.Request, error) {
+		return cloneAIRequest(req)
+	})
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrKnowledgeQueryUpstream, err)
 	}
@@ -221,13 +234,17 @@ func (c *AIClient) IngestKnowledgeVideo(ctx context.Context, payload any) ([]byt
 	if err != nil {
 		return nil, 0, fmt.Errorf("encode knowledge ingestion request: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/knowledge/ingestions/video", bytes.NewReader(body))
-	if err != nil {
-		return nil, 0, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	c.setInternalAuthHeader(req)
-	resp, err := c.httpClient.Do(req)
+	// Ingestion is pinned by source key and expected content hash
+	// (classification (b)), so the shared retry policy applies.
+	resp, err := c.doRetryable(ctx, "/api/knowledge/ingestions/video", true, func() (*http.Request, error) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/knowledge/ingestions/video", bytes.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+		c.setInternalAuthHeader(req)
+		return req, nil
+	})
 	if err != nil {
 		return nil, 0, err
 	}
