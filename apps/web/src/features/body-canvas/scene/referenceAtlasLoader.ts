@@ -69,7 +69,7 @@ export async function loadPinnedReferenceAtlasSurface(
     VANATOME_INITIAL_SYSTEM_ID,
     options,
   );
-  const group = parseReferenceAtlasSurface(bytes);
+  const group = await parseReferenceAtlasSurface(bytes);
   return {
     group,
     modelUrl,
@@ -112,7 +112,7 @@ export async function loadPinnedReferenceMuscles(
   options.signal?.throwIfAborted();
   await options.parseAfter?.catch(() => undefined);
   options.signal?.throwIfAborted();
-  const group = parseReferenceAtlasMeshes(bytes, {
+  const group = await parseReferenceAtlasMeshes(bytes, {
     accept: (name) => /__(muscle|tendon)$/.test(name),
     label: "Z-Anatomy muscular layer / Body Canvas",
     emptyMessage: "Reference muscles GLB contains no meshes",
@@ -147,7 +147,7 @@ async function loadPinnedReferenceSystem(
   const { bytes, modelUrl } = await fetchPinnedSystemBytes(systemId, options);
   await options.parseAfter?.catch(() => undefined);
   options.signal?.throwIfAborted();
-  const group = parseReferenceAtlasMeshes(bytes, {
+  const group = await parseReferenceAtlasMeshes(bytes, {
     accept: () => true,
     label: `Vanatome ${systemId} layer / Body Canvas`,
     emptyMessage: `Vanatome ${systemId} GLB contains no meshes`,
