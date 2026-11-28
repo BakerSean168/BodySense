@@ -56,6 +56,9 @@ const (
 	healthDocumentChampionConfigurationIDEnv      = "HEALTH_DOCUMENT_CHAMPION_CONFIGURATION_ID"
 	healthDocumentQualificationConfigurationIDEnv = "HEALTH_DOCUMENT_QUALIFICATION_CONFIGURATION_ID"
 	healthDocumentRollbackConfigurationIDEnv      = "HEALTH_DOCUMENT_ROLLBACK_CONFIGURATION_ID"
+
+	altchaHMACKeyEnv               = "ALTCHA_HMAC_KEY"
+	beforeUserCreatedHookSecretEnv = "BEFORE_USER_CREATED_HOOK_SECRET"
 )
 
 const (
@@ -143,6 +146,17 @@ type HealthDocument struct {
 	RollbackConfigurationID      string
 }
 
+// Captcha carries the ALTCHA human-verification secrets: the HMAC key
+// that signs and verifies proof-of-work challenges, and the Standard
+// Webhooks secret Supabase signs Before User Created hook calls with.
+// Both are trimmed but otherwise passed through unresolved —
+// internal/captcha owns the fail-closed behaviour while either is
+// absent or malformed.
+type Captcha struct {
+	HMACKey    string
+	HookSecret string
+}
+
 // Config is the resolved process configuration injected by the composition
 // root.
 type Config struct {
@@ -152,6 +166,7 @@ type Config struct {
 	Episodic       Episodic
 	Deployment     Deployment
 	HealthDocument HealthDocument
+	Captcha        Captcha
 }
 
 // Load reads every configuration value the API composition root injects.
@@ -215,6 +230,10 @@ func Load(getenv Getenv) Config {
 			ChampionConfigurationID:      value(getenv, healthDocumentChampionConfigurationIDEnv),
 			QualificationConfigurationID: value(getenv, healthDocumentQualificationConfigurationIDEnv),
 			RollbackConfigurationID:      value(getenv, healthDocumentRollbackConfigurationIDEnv),
+		},
+		Captcha: Captcha{
+			HMACKey:    value(getenv, altchaHMACKeyEnv),
+			HookSecret: value(getenv, beforeUserCreatedHookSecretEnv),
 		},
 	}
 }

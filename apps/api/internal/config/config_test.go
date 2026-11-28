@@ -117,3 +117,21 @@ func TestLoadTrimsDeploymentPointersOnly(t *testing.T) {
 		t.Fatalf("health-document stage = %q", cfg.HealthDocument.Stage)
 	}
 }
+
+func TestLoadReadsCaptchaSecrets(t *testing.T) {
+	cfg := Load(envFrom(map[string]string{
+		"ALTCHA_HMAC_KEY":                 "  altcha-key  ",
+		"BEFORE_USER_CREATED_HOOK_SECRET": "v1,whsec_c2VjcmV0",
+	}))
+	if cfg.Captcha.HMACKey != "altcha-key" {
+		t.Fatalf("expected trimmed ALTCHA HMAC key, got %q", cfg.Captcha.HMACKey)
+	}
+	if cfg.Captcha.HookSecret != "v1,whsec_c2VjcmV0" {
+		t.Fatalf("expected hook secret passed through, got %q", cfg.Captcha.HookSecret)
+	}
+
+	empty := Load(envFrom(map[string]string{}))
+	if empty.Captcha.HMACKey != "" || empty.Captcha.HookSecret != "" {
+		t.Fatalf("expected captcha secrets to default empty, got %+v", empty.Captcha)
+	}
+}
