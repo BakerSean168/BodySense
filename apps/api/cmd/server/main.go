@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bodysense/api/internal/auth"
+	"github.com/bodysense/api/internal/captcha"
 	"github.com/bodysense/api/internal/config"
 	consultationruntime "github.com/bodysense/api/internal/consultation"
 	"github.com/bodysense/api/internal/database"
@@ -364,6 +365,16 @@ func (w *serverWiring) serve() {
 	listenAddress := resolveAPIListenAddress(host, port)
 
 	r := newRouter(w.corsOrigins)
+
+	// ALTCHA human verification: the challenge endpoint plus the
+	// Supabase Before User Created hook that verifies proofs before a
+	// signup completes. Both are public by design; the captcha package
+	// fails closed while its secrets are unconfigured.
+	captchaService := captcha.NewService(w.apiConfig.Captcha, database.RedisClient)
+	if !captchaService.Configured() {
+		log.Printf("ALTCHA captcha not configured: set ALTCHA_HMAC_KEY and BEFORE_USER_CREATED_HOOK_SECRET to enable signup verification")
+	}
+	captcha.RegisterRoutes(r, captchaService)
 
 	// Protected routes. Keep one auth middleware instance so handwritten and
 	// generated OpenAPI routes share the exact same token/session authority.
