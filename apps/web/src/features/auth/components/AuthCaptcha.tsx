@@ -1,101 +1,182 @@
-import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
-import { useEffect, useRef, useState, type Ref } from "react";
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type Ref,
+} from "react";
+import { apiUrl } from "@/lib/api-url";
 
-// Supabase verifies the CAPTCHA server-side with the Turnstile secret held in
-// the Supabase dashboard. The browser only receives a public site key.
-export const turnstileSiteKey =
-  import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim() ?? "";
-
-// If neither the widget nor an error callback shows up within this window,
-// the Turnstile script never loaded (CSP, network filter, outage). That must
-// surface as a visible failure with a retry — never as a silent gap that the
-// form then reports as "请完成人机验证" for a widget that never appeared.
+// ALTCHA replaces Cloudflare Turnstile. The widget solves a proof-of-work
+// challenge issued by our own Go API; the solved payload travels to
+// Supabase as signUp metadata (options.data.altcha) and the API's Before
+// User Created hook verifies it server-side before any account exists.
+// Nothing is configured at build time and nothing is verified in the
+// browser: if the widget cannot load or the challenge cannot be fetched,
+// that must surface as a visible failure with a retry — never as a silent
+// gap that the form then reports as "请完成人机验证" for a widget that
+// never appeared.
 const WIDGET_LOAD_TIMEOUT_MS = 10_000;
 
-// The rendered Turnstile box is 72px tall at the auth forms' content width
-// (measured in a real browser). The widget and the load-failure message share
-// this fixed-height slot so the form's total height never changes when the
-// captcha state flips: a load failure must not shove the fields and the
-// submit button around, and the failure copy + retry live inside the slot
-// instead of adding new vertical height to the page.
+// The widget box and the load-failure message share this fixed-height
+// slot so the form's total height never changes when the captcha state
+// flips: a load failure must not shove the fields and the submit button
+// around, and the failure copy + retry live inside the slot instead of
+// adding new vertical height to the page. 72px is the slot the auth ink
+// board was measured against with the previous widget.
 export const CAPTCHA_SLOT_CLASS = "mt-5 h-[72px]";
+
+export interface AuthCaptchaHandle {
+  /** The solved ALTCHA payload, or null while unsolved/failed. */
+  getProof: () => string | null;
+  /** Resolves with the payload once solved, or null on failure/timeout. */
+  waitForProof: (timeoutMs: number) => Promise<string | null>;
+  /** Discards the current proof and restarts the widget. */
+  reset: () => void;
+}
+
+type AltchaWidgetElement = HTMLElement & {
+  reset?: () => void;
+};
 
 export function AuthCaptcha({
   captchaRef,
   onLoadFailureChange,
 }: {
-  captchaRef: Ref<TurnstileInstance>;
+  captchaRef: Ref<AuthCaptchaHandle>;
   onLoadFailureChange?: (failed: boolean) => void;
 }) {
-  const [attempt, setAttempt] = useState(0);
+  const [widgetEl, setWidgetEl] = useState<AltchaWidgetElement | null>(null);
+  const proofRef = useRef<string | null>(null);
+  const waitersRef = useRef<Array<(proof: string | null) => void>>([]);
+  const interactedRef = useRef(false);
   const [failed, setFailed] = useState(false);
-  const loadedRef = useRef(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const failureCallbackRef = useRef(onLoadFailureChange);
 
   useEffect(() => {
     failureCallbackRef.current = onLoadFailureChange;
   });
 
+  const settleWaiters = useCallback((proof: string | null) => {
+    const waiters = waitersRef.current;
+    waitersRef.current = [];
+    waiters.forEach((resolve) => resolve(proof));
+  }, []);
+
+  const markFailed = useCallback(() => {
+    interactedRef.current = true;
+    setFailed(true);
+    failureCallbackRef.current?.(true);
+    settleWaiters(null);
+  }, [settleWaiters]);
+
+  // The widget module is loaded on demand: at ~220KB it would push the
+  // entry chunk over the production bundle budget, and only the auth
+  // pages ever need it. The <altcha-widget> element below upgrades in
+  // place once the module registers it; a failed load lands in the same
+  // visible failure state as a failed challenge fetch.
   useEffect(() => {
-    if (!turnstileSiteKey) return undefined;
+    let cancelled = false;
+    void (async () => {
+      try {
+        await import("altcha");
+        await import("altcha/i18n/zh-cn");
+      } catch {
+        if (!cancelled) {
+          markFailed();
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadAttempt, markFailed]);
+
+  // Watchdog: if the widget produces no event at all within the window,
+  // the module or the challenge request never made it (CSP, network
+  // filter, API down). Fail visibly instead of hanging the form.
+  useEffect(() => {
+    if (failed) return undefined;
     const timer = setTimeout(() => {
-      if (!loadedRef.current) {
-        setFailed(true);
-        failureCallbackRef.current?.(true);
+      if (!interactedRef.current) {
+        markFailed();
       }
     }, WIDGET_LOAD_TIMEOUT_MS);
     return () => {
       clearTimeout(timer);
     };
-  }, [attempt]);
+  }, [failed, markFailed]);
 
-  const markLoaded = () => {
-    loadedRef.current = true;
-    if (failed) {
-      setFailed(false);
-      failureCallbackRef.current?.(false);
-    }
-  };
+  useEffect(() => {
+    if (!widgetEl) return undefined;
+    const onVerified = (event: Event) => {
+      interactedRef.current = true;
+      const payload =
+        (isCustomEvent<{ payload?: string }>(event)
+          ? event.detail?.payload
+          : undefined) ?? readHiddenPayload(widgetEl);
+      if (payload) {
+        proofRef.current = payload;
+        settleWaiters(payload);
+      }
+    };
+    const onStateChange = (event: Event) => {
+      const state = isCustomEvent<{ state?: string }>(event)
+        ? event.detail?.state
+        : undefined;
+      if (state) {
+        interactedRef.current = true;
+      }
+      if (state === "error" || state === "expired") {
+        markFailed();
+      }
+    };
+    widgetEl.addEventListener("verified", onVerified);
+    widgetEl.addEventListener("statechange", onStateChange);
+    return () => {
+      widgetEl.removeEventListener("verified", onVerified);
+      widgetEl.removeEventListener("statechange", onStateChange);
+    };
+  }, [widgetEl, markFailed, settleWaiters]);
 
-  const markFailed = () => {
-    loadedRef.current = true;
-    setFailed(true);
-    failureCallbackRef.current?.(true);
-  };
+  useImperativeHandle(
+    captchaRef,
+    () => ({
+      getProof: () => proofRef.current,
+      waitForProof: (timeoutMs: number) => {
+        if (proofRef.current) return Promise.resolve(proofRef.current);
+        if (failed) return Promise.resolve(null);
+        return new Promise<string | null>((resolve) => {
+          const timer = setTimeout(() => resolve(proofRef.current), timeoutMs);
+          waitersRef.current.push((proof) => {
+            clearTimeout(timer);
+            resolve(proof);
+          });
+        });
+      },
+      reset: () => {
+        proofRef.current = null;
+        widgetEl?.reset?.();
+      },
+    }),
+    [failed, widgetEl],
+  );
 
   const retry = () => {
-    loadedRef.current = false;
+    interactedRef.current = false;
+    proofRef.current = null;
     setFailed(false);
     failureCallbackRef.current?.(false);
-    setAttempt((value) => value + 1);
+    setLoadAttempt((value) => value + 1);
   };
-
-  if (!turnstileSiteKey) {
-    // A build without a site key never demands a captcha token (both forms
-    // gate every captcha requirement on the key being configured), so this
-    // note is a developer-facing signal, not a user blocker — and production
-    // builds always carry a key. It must still not consume in-flow height:
-    // the auth sheets follow a fixed ink board with zero spare vertical
-    // room (see the auth-ink-pages E2E overflow assertion), so unlike the
-    // widget/failure slot the note floats at the slot's position and
-    // leaves the form's height untouched.
-    return (
-      <div className="relative h-0">
-        <p
-          className="absolute inset-x-0 top-0 text-[13px] leading-[1.2] text-[var(--ui-muted)]"
-          data-testid="auth-turnstile-unconfigured"
-        >
-          人机验证未启用，本次提交不会进行人机验证。
-        </p>
-      </div>
-    );
-  }
 
   if (failed) {
     return (
       <div
         className={`${CAPTCHA_SLOT_CLASS} flex flex-col justify-center`}
-        data-testid="auth-turnstile-failed"
+        data-testid="auth-captcha-failed"
       >
         <p
           role="alert"
@@ -115,17 +196,25 @@ export function AuthCaptcha({
   }
 
   return (
-    <div className={CAPTCHA_SLOT_CLASS} data-testid="auth-turnstile">
-      <Turnstile
-        key={attempt}
-        ref={captchaRef}
-        siteKey={turnstileSiteKey}
-        options={{ theme: "light", refreshExpired: "auto" }}
-        onWidgetLoad={markLoaded}
-        onSuccess={markLoaded}
-        onError={markFailed}
-        scriptOptions={{ onError: markFailed }}
+    <div className={CAPTCHA_SLOT_CLASS} data-testid="auth-captcha">
+      <altcha-widget
+        ref={setWidgetEl}
+        challenge={apiUrl("/api/v1/captcha/challenge")}
+        name="altcha"
+        auto="onload"
+        language="zh-cn"
       />
     </div>
   );
+}
+
+function isCustomEvent<T>(event: Event): event is CustomEvent<T> {
+  return event instanceof CustomEvent;
+}
+
+// The verified event carries the payload; the hidden input is the
+// form-integration copy of the same value and serves as a fallback.
+function readHiddenPayload(el: HTMLElement): string | null {
+  const input = el.querySelector<HTMLInputElement>('input[name="altcha"]');
+  return input?.value ? input.value : null;
 }

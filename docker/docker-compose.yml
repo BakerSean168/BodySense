@@ -211,7 +211,6 @@ services:
       VITE_DEV_API_TARGET: http://api:8080
       VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-https://qdezojzgajsunjwthifv.supabase.co}
       VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY:-}
-      VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-}
       # Remote/disposable dev must not expose Chromium to Vite's cold
       # dependency-optimizer restart window (ERR_NETWORK_CHANGED on lazy routes).
       BODYSENSE_VITE_BUNDLED_DEV: ${BODYSENSE_VITE_BUNDLED_DEV:-true}

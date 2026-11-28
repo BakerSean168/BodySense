@@ -203,7 +203,6 @@ SUPABASE_URL=https://qdezojzgajsunjwthifv.supabase.co
 VITE_SUPABASE_URL=https://qdezojzgajsunjwthifv.supabase.co
 # Public client key; configure in this ignored development env.
 VITE_SUPABASE_PUBLISHABLE_KEY=
-VITE_TURNSTILE_SITE_KEY=
 
 # OpenRouter API Key — 请手动填写
 OPENROUTER_API_KEY=

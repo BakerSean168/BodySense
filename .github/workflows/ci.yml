@@ -670,6 +670,9 @@ jobs:
           CONSULTATION_CHAMPION_CONFIGURATION_ID: consult-config-83b6a1cc70477c82
           # S6-B preview: test-only, default-off in every real environment.
           EPISODIC_NOTES_CONTROLS_ENABLED: "true"
+          # ALTCHA challenge issuance for the E2E registration flow
+          # (test-only value; the stub Supabase never calls the hook).
+          ALTCHA_HMAC_KEY: ci-altcha-test-key
         run: |
           go run ./cmd/server > /tmp/bodysense-api.log 2>&1 &
           echo $! > /tmp/bodysense-api.pid
@@ -713,7 +716,6 @@ jobs:
           E2E_API_BASE_URL: http://127.0.0.1:8080
           VITE_SUPABASE_URL: http://127.0.0.1:18120
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_test
-          VITE_TURNSTILE_SITE_KEY: ""
           VITE_BODYSENSE_ANATOMY_CATALOG_URL: https://assets.bakersean.top/anatomy/vanatome/1.4.0/releases/1.4.0/catalog.json
           # S6-B preview is enabled only for the browser E2E environment. The
           # spec seeds inert shadow notes into the disposable service database.
