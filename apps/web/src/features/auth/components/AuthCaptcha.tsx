@@ -12,6 +12,14 @@ export const turnstileSiteKey =
 // form then reports as "请完成人机验证" for a widget that never appeared.
 const WIDGET_LOAD_TIMEOUT_MS = 10_000;
 
+// The rendered Turnstile box is 72px tall at the auth forms' content width
+// (measured in a real browser). The widget and the load-failure message share
+// this fixed-height slot so the form's total height never changes when the
+// captcha state flips: a load failure must not shove the fields and the
+// submit button around, and the failure copy + retry live inside the slot
+// instead of adding new vertical height to the page.
+export const CAPTCHA_SLOT_CLASS = "mt-5 h-[72px]";
+
 export function AuthCaptcha({
   captchaRef,
   onLoadFailureChange,
@@ -63,19 +71,32 @@ export function AuthCaptcha({
   };
 
   if (!turnstileSiteKey) {
+    // A build without a site key never demands a captcha token (both forms
+    // gate every captcha requirement on the key being configured), so this
+    // note is a developer-facing signal, not a user blocker — and production
+    // builds always carry a key. It must still not consume in-flow height:
+    // the auth sheets follow a fixed ink board with zero spare vertical
+    // room (see the auth-ink-pages E2E overflow assertion), so unlike the
+    // widget/failure slot the note floats at the slot's position and
+    // leaves the form's height untouched.
     return (
-      <p
-        className="mt-5 text-[13px] leading-[1.2] text-[var(--ui-muted)]"
-        data-testid="auth-turnstile-unconfigured"
-      >
-        人机验证未启用，本次提交不会进行人机验证。
-      </p>
+      <div className="relative h-0">
+        <p
+          className="absolute inset-x-0 top-0 text-[13px] leading-[1.2] text-[var(--ui-muted)]"
+          data-testid="auth-turnstile-unconfigured"
+        >
+          人机验证未启用，本次提交不会进行人机验证。
+        </p>
+      </div>
     );
   }
 
   if (failed) {
     return (
-      <div className="mt-5" data-testid="auth-turnstile-failed">
+      <div
+        className={`${CAPTCHA_SLOT_CLASS} flex flex-col justify-center`}
+        data-testid="auth-turnstile-failed"
+      >
         <p
           role="alert"
           className="text-[13px] leading-[1.2] font-semibold text-[var(--ui-danger)]"
@@ -85,7 +106,7 @@ export function AuthCaptcha({
         <button
           type="button"
           onClick={retry}
-          className="mt-2 text-[13px] leading-[1.2] font-semibold text-[var(--ui-primary)] underline underline-offset-4"
+          className="mt-2 self-start text-[13px] leading-[1.2] font-semibold text-[var(--ui-primary)] underline underline-offset-4"
         >
           重新加载验证
         </button>
@@ -94,7 +115,7 @@ export function AuthCaptcha({
   }
 
   return (
-    <div className="mt-5" data-testid="auth-turnstile">
+    <div className={CAPTCHA_SLOT_CLASS} data-testid="auth-turnstile">
       <Turnstile
         key={attempt}
         ref={captchaRef}

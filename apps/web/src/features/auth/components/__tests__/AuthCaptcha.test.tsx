@@ -88,6 +88,34 @@ describe("AuthCaptcha", () => {
     expect(screen.queryByTestId("mock-turnstile")).toBeNull();
   });
 
+  it("gives the widget and the failure state one shared fixed-height slot", async () => {
+    turnstileBehavior.mode = "load";
+    const loaded = await loadAuthCaptcha("test-site-key");
+    render(<loaded.AuthCaptcha captchaRef={createRef()} />);
+    const widgetSlot = screen.getByTestId("auth-turnstile");
+    expect(widgetSlot.className).toContain(loaded.CAPTCHA_SLOT_CLASS);
+    expect(widgetSlot.className).toContain("h-[72px]");
+
+    turnstileBehavior.mode = "error";
+    const errored = await loadAuthCaptcha("test-site-key");
+    render(<errored.AuthCaptcha captchaRef={createRef()} />);
+    const failedSlot = await screen.findByTestId("auth-turnstile-failed");
+    expect(failedSlot.className).toContain(errored.CAPTCHA_SLOT_CLASS);
+    expect(failedSlot.className).toContain("h-[72px]");
+  });
+
+  it("keeps the unconfigured note visible without consuming in-flow height", async () => {
+    turnstileBehavior.mode = "load";
+    const { AuthCaptcha } = await loadAuthCaptcha("");
+    render(<AuthCaptcha captchaRef={createRef()} />);
+    const note = screen.getByTestId("auth-turnstile-unconfigured");
+    expect(note.textContent).toContain("人机验证未启用");
+    // The auth sheets follow a fixed ink board with zero spare vertical
+    // room, so the note's wrapper must stay heightless (the note floats
+    // inside the margin band) instead of pushing the form taller.
+    expect(note.parentElement?.className).toContain("h-0");
+  });
+
   it("register form reports the load failure instead of asking to complete a missing widget", async () => {
     turnstileBehavior.mode = "error";
     vi.resetModules();
