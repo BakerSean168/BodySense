@@ -24,6 +24,7 @@ export function RegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [consent, setConsent] = useState(false);
   const [validationErrors, setValidationErrors] = useState<RegisterErrors>({});
+  const [captchaFailed, setCaptchaFailed] = useState(false);
 
   // The auth store error is global: reset it (and this form) whenever the
   // form mounts or unmounts so a register error never leaks onto /login.
@@ -71,6 +72,13 @@ export function RegisterForm() {
     clearError();
 
     if (!validateForm()) return;
+    if (turnstileSiteKey && captchaFailed) {
+      setValidationErrors((errors) => ({
+        ...errors,
+        captcha: "人机验证加载失败，请重新加载验证后再提交",
+      }));
+      return;
+    }
     const captchaToken = turnstileSiteKey
       ? captchaRef.current?.getResponse()
       : undefined;
@@ -155,7 +163,10 @@ export function RegisterForm() {
         )}
       </div>
 
-      <AuthCaptcha captchaRef={captchaRef} />
+      <AuthCaptcha
+        captchaRef={captchaRef}
+        onLoadFailureChange={setCaptchaFailed}
+      />
       {validationErrors.captcha && (
         <p role="alert" className="mt-2 text-[13px] text-[var(--ui-danger)]">
           {validationErrors.captcha}

@@ -16,6 +16,7 @@ export function LoginForm() {
     email?: string;
     password?: string;
   }>({});
+  const [captchaFailed, setCaptchaFailed] = useState(false);
 
   // The auth store error is global: reset it (and this form) whenever the
   // form mounts or unmounts so a login error never leaks onto /register.
@@ -49,6 +50,13 @@ export function LoginForm() {
     clearError();
 
     if (!validateForm()) return;
+    if (turnstileSiteKey && captchaFailed) {
+      setValidationErrors((errors) => ({
+        ...errors,
+        password: "人机验证加载失败，请重新加载验证后再提交",
+      }));
+      return;
+    }
     const captchaToken = turnstileSiteKey
       ? captchaRef.current?.getResponse()
       : undefined;
@@ -98,7 +106,10 @@ export function LoginForm() {
         error={passwordError}
       />
 
-      <AuthCaptcha captchaRef={captchaRef} />
+      <AuthCaptcha
+        captchaRef={captchaRef}
+        onLoadFailureChange={setCaptchaFailed}
+      />
 
       <div className="mt-[52px] lg:mt-[56px]">
         <InkButton
