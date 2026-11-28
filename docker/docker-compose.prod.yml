@@ -160,6 +160,7 @@ services:
     mem_reservation: ${AI_SERVICE_MEMORY_RESERVATION:-160m}
     init: true
     environment:
+      AI_SERVICE_INTERNAL_TOKEN: ${AI_SERVICE_INTERNAL_TOKEN:-}
       AI_SERVICE_PORT: ${AI_SERVICE_PORT:-8100}
       ENVIRONMENT: production
       LITELLM_BASE_URL: http://litellm-gateway:4000/v1
@@ -209,6 +210,7 @@ services:
       document-service:
         condition: service_healthy
     environment:
+      AI_SERVICE_INTERNAL_TOKEN: ${AI_SERVICE_INTERNAL_TOKEN:-}
       APP_ENV: production
       GIN_MODE: release
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-172.16.0.0/12}
