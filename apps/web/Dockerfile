@@ -4,7 +4,6 @@ WORKDIR /app
 # Client-side public configuration is injected at build/runtime by the host.
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_PUBLISHABLE_KEY
-ARG VITE_TURNSTILE_SITE_KEY
 
 # Supply-chain validation depends on authoritative registry metadata.
 # Default to the canonical npm registry; China-local builds may explicitly

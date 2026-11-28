@@ -6,6 +6,20 @@ import { RegisterPage } from "@/pages/RegisterPage";
 import { useAuthStore } from "@/stores/authStore";
 import userEvent from "@testing-library/user-event";
 
+// The ALTCHA web component is driven by events in these tests (as in
+// AuthCaptcha.test.tsx); the real module would fetch and solve a
+// challenge against the API.
+vi.mock("altcha", () => ({}));
+vi.mock("altcha/i18n/zh-cn", () => ({}));
+
+function solveCaptcha(container: HTMLElement) {
+  const el = container.querySelector("altcha-widget");
+  if (!el) throw new Error("altcha widget not rendered");
+  el.dispatchEvent(
+    new CustomEvent("verified", { detail: { payload: "authforms-payload" } }),
+  );
+}
+
 const initial = useAuthStore.getState();
 
 function renderAt(node: React.ReactNode) {
@@ -85,7 +99,7 @@ describe("RegisterPage (Penpot ink register)", () => {
   it("requires 8+ char password and consent before registering", async () => {
     const register = vi.fn().mockResolvedValue(undefined);
     act(() => useAuthStore.setState({ register }));
-    renderAt(<RegisterPage />);
+    const { container } = renderAt(<RegisterPage />);
     fireEvent.change(screen.getByLabelText("邮箱地址"), {
       target: { value: "a@b.co" },
     });
@@ -106,10 +120,15 @@ describe("RegisterPage (Penpot ink register)", () => {
       target: { value: "longenough1" },
     });
     await userEvent.click(screen.getByRole("checkbox", { name: /同意/ }));
+    solveCaptcha(container);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "创建账号" }));
     });
-    expect(register).toHaveBeenCalledWith("a@b.co", "longenough1", undefined);
+    expect(register).toHaveBeenCalledWith(
+      "a@b.co",
+      "longenough1",
+      "authforms-payload",
+    );
   });
 
   it("requires the confirm password", () => {
@@ -154,7 +173,7 @@ describe("RegisterPage (Penpot ink register)", () => {
   it("registers when the two passwords match", async () => {
     const register = vi.fn().mockResolvedValue(undefined);
     act(() => useAuthStore.setState({ register }));
-    renderAt(<RegisterPage />);
+    const { container } = renderAt(<RegisterPage />);
     fireEvent.change(screen.getByLabelText("邮箱地址"), {
       target: { value: "a@b.co" },
     });
@@ -165,11 +184,16 @@ describe("RegisterPage (Penpot ink register)", () => {
       target: { value: "longenough1" },
     });
     await userEvent.click(screen.getByRole("checkbox", { name: /同意/ }));
+    solveCaptcha(container);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "创建账号" }));
     });
     expect(screen.queryByText("两次输入的密码不一致")).toBeNull();
-    expect(register).toHaveBeenCalledWith("a@b.co", "longenough1", undefined);
+    expect(register).toHaveBeenCalledWith(
+      "a@b.co",
+      "longenough1",
+      "authforms-payload",
+    );
   });
 
   it("toggles the confirm field with its own eye button", () => {

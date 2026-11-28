@@ -4,134 +4,167 @@ import { createRef } from "react";
 import { MemoryRouter } from "react-router";
 import userEvent from "@testing-library/user-event";
 
-const turnstileBehavior = vi.hoisted(() => ({
-  mode: "load" as "load" | "error" | "hang",
-}));
+// The real altcha module registers a web component that fetches and
+// solves proof-of-work challenges; the tests drive the element's events
+// directly instead.
+vi.mock("altcha", () => ({}));
+vi.mock("altcha/i18n/zh-cn", () => ({}));
 
-vi.mock("@marsidev/react-turnstile", async () => {
-  const React = await import("react");
-  return {
-    Turnstile: React.forwardRef(
-      (props: {
-        onWidgetLoad?: (widgetId: string) => void;
-        onError?: (errorCode: string) => void;
-      }) => {
-        React.useEffect(() => {
-          if (turnstileBehavior.mode === "load") {
-            props.onWidgetLoad?.("widget-1");
-          }
-          if (turnstileBehavior.mode === "error") {
-            props.onError?.("200500");
-          }
-        }, []);
-        return React.createElement("div", { "data-testid": "mock-turnstile" });
-      },
-    ),
-  };
-});
+import {
+  AuthCaptcha,
+  CAPTCHA_SLOT_CLASS,
+  type AuthCaptchaHandle,
+} from "../AuthCaptcha";
 
-async function loadAuthCaptcha(siteKey: string) {
-  vi.resetModules();
-  vi.stubEnv("VITE_TURNSTILE_SITE_KEY", siteKey);
-  return import("../AuthCaptcha");
+function widgetEl(container: HTMLElement): HTMLElement {
+  const el = container.querySelector("altcha-widget");
+  if (!(el instanceof HTMLElement)) {
+    throw new Error("widget element not rendered");
+  }
+  return el;
+}
+
+function fireVerified(el: HTMLElement, payload: string) {
+  el.dispatchEvent(new CustomEvent("verified", { detail: { payload } }));
+}
+
+function fireState(el: HTMLElement, state: string) {
+  el.dispatchEvent(new CustomEvent("statechange", { detail: { state } }));
 }
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllEnvs();
 });
 
 describe("AuthCaptcha", () => {
+  it("renders the widget in the fixed-height slot, solving on load against the API", () => {
+    const { container } = render(<AuthCaptcha captchaRef={createRef()} />);
+    const slot = screen.getByTestId("auth-captcha");
+    expect(slot.className).toContain(CAPTCHA_SLOT_CLASS);
+    expect(slot.className).toContain("h-[72px]");
+    const el = widgetEl(container);
+    expect(el.getAttribute("challenge")).toContain("/api/v1/captcha/challenge");
+    expect(el.getAttribute("auto")).toBe("onload");
+  });
+
+  it("exposes the solved payload through the handle", async () => {
+    const ref = createRef<AuthCaptchaHandle>();
+    const { container } = render(<AuthCaptcha captchaRef={ref} />);
+    expect(ref.current?.getProof()).toBeNull();
+    fireVerified(widgetEl(container), "solved-payload");
+    expect(ref.current?.getProof()).toBe("solved-payload");
+    await expect(ref.current?.waitForProof(1_000)).resolves.toBe(
+      "solved-payload",
+    );
+  });
+
+  it("waitForProof resolves when the widget finishes after the call", async () => {
+    const ref = createRef<AuthCaptchaHandle>();
+    const { container } = render(<AuthCaptcha captchaRef={ref} />);
+    const pending = ref.current?.waitForProof(5_000);
+    fireVerified(widgetEl(container), "late-payload");
+    await expect(pending).resolves.toBe("late-payload");
+  });
+
+  it("waitForProof resolves null on timeout", async () => {
+    const ref = createRef<AuthCaptchaHandle>();
+    render(<AuthCaptcha captchaRef={ref} />);
+    await expect(ref.current?.waitForProof(10)).resolves.toBeNull();
+  });
+
   it("shows a visible failure with retry when the widget errors", async () => {
-    turnstileBehavior.mode = "error";
-    const { AuthCaptcha } = await loadAuthCaptcha("test-site-key");
-    render(<AuthCaptcha captchaRef={createRef()} />);
-    expect(await screen.findByTestId("auth-turnstile-failed")).toBeTruthy();
-    expect(screen.getByRole("alert").textContent).toContain("人机验证加载失败");
-    expect(screen.queryByTestId("mock-turnstile")).toBeNull();
-
-    turnstileBehavior.mode = "load";
-    fireEvent.click(screen.getByRole("button", { name: "重新加载验证" }));
-    expect(await screen.findByTestId("mock-turnstile")).toBeTruthy();
-    expect(screen.queryByTestId("auth-turnstile-failed")).toBeNull();
-  });
-
-  it("fails visibly when the widget never loads within the timeout", async () => {
-    turnstileBehavior.mode = "hang";
-    const { AuthCaptcha } = await loadAuthCaptcha("test-site-key");
-    vi.useFakeTimers();
-    render(<AuthCaptcha captchaRef={createRef()} />);
-    expect(screen.queryByTestId("auth-turnstile-failed")).toBeNull();
-    act(() => {
-      vi.advanceTimersByTime(10_000);
-    });
-    expect(screen.getByTestId("auth-turnstile-failed")).toBeTruthy();
-  });
-
-  it("stays quiet when the widget loads in time", async () => {
-    turnstileBehavior.mode = "load";
-    const { AuthCaptcha } = await loadAuthCaptcha("test-site-key");
-    vi.useFakeTimers();
-    render(<AuthCaptcha captchaRef={createRef()} />);
-    act(() => {
-      vi.advanceTimersByTime(10_000);
-    });
-    expect(screen.queryByTestId("auth-turnstile-failed")).toBeNull();
-    expect(screen.getByTestId("mock-turnstile")).toBeTruthy();
-  });
-
-  it("renders an explicit note instead of a silent gap without a site key", async () => {
-    turnstileBehavior.mode = "load";
-    const { AuthCaptcha } = await loadAuthCaptcha("");
-    render(<AuthCaptcha captchaRef={createRef()} />);
-    expect(screen.getByTestId("auth-turnstile-unconfigured")).toBeTruthy();
-    expect(screen.queryByTestId("mock-turnstile")).toBeNull();
-  });
-
-  it("gives the widget and the failure state one shared fixed-height slot", async () => {
-    turnstileBehavior.mode = "load";
-    const loaded = await loadAuthCaptcha("test-site-key");
-    render(<loaded.AuthCaptcha captchaRef={createRef()} />);
-    const widgetSlot = screen.getByTestId("auth-turnstile");
-    expect(widgetSlot.className).toContain(loaded.CAPTCHA_SLOT_CLASS);
-    expect(widgetSlot.className).toContain("h-[72px]");
-
-    turnstileBehavior.mode = "error";
-    const errored = await loadAuthCaptcha("test-site-key");
-    render(<errored.AuthCaptcha captchaRef={createRef()} />);
-    const failedSlot = await screen.findByTestId("auth-turnstile-failed");
-    expect(failedSlot.className).toContain(errored.CAPTCHA_SLOT_CLASS);
+    const onLoadFailureChange = vi.fn();
+    const { container } = render(
+      <AuthCaptcha
+        captchaRef={createRef()}
+        onLoadFailureChange={onLoadFailureChange}
+      />,
+    );
+    fireState(widgetEl(container), "error");
+    const failedSlot = await screen.findByTestId("auth-captcha-failed");
+    expect(failedSlot.className).toContain(CAPTCHA_SLOT_CLASS);
     expect(failedSlot.className).toContain("h-[72px]");
+    expect(screen.getByRole("alert").textContent).toContain("人机验证加载失败");
+    expect(onLoadFailureChange).toHaveBeenCalledWith(true);
+    expect(container.querySelector("altcha-widget")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "重新加载验证" }));
+    expect(await screen.findByTestId("auth-captcha")).toBeTruthy();
+    expect(screen.queryByTestId("auth-captcha-failed")).toBeNull();
+    expect(onLoadFailureChange).toHaveBeenCalledWith(false);
   });
 
-  it("keeps the unconfigured note visible without consuming in-flow height", async () => {
-    turnstileBehavior.mode = "load";
-    const { AuthCaptcha } = await loadAuthCaptcha("");
+  it("fails visibly when the widget produces no event within the timeout", () => {
+    vi.useFakeTimers();
     render(<AuthCaptcha captchaRef={createRef()} />);
-    const note = screen.getByTestId("auth-turnstile-unconfigured");
-    expect(note.textContent).toContain("人机验证未启用");
-    // The auth sheets follow a fixed ink board with zero spare vertical
-    // room, so the note's wrapper must stay heightless (the note floats
-    // inside the margin band) instead of pushing the form taller.
-    expect(note.parentElement?.className).toContain("h-0");
+    expect(screen.queryByTestId("auth-captcha-failed")).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(screen.getByTestId("auth-captcha-failed")).toBeTruthy();
   });
 
-  it("register form reports the load failure instead of asking to complete a missing widget", async () => {
-    turnstileBehavior.mode = "error";
-    vi.resetModules();
-    vi.stubEnv("VITE_TURNSTILE_SITE_KEY", "test-site-key");
+  it("stays quiet when the widget reports progress in time", () => {
+    vi.useFakeTimers();
+    const { container } = render(<AuthCaptcha captchaRef={createRef()} />);
+    fireState(widgetEl(container), "verifying");
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(screen.queryByTestId("auth-captcha-failed")).toBeNull();
+    expect(screen.getByTestId("auth-captcha")).toBeTruthy();
+  });
+
+  it("register form passes the solved proof to the store", async () => {
     const { RegisterPage } = await import("@/pages/RegisterPage");
     const { useAuthStore } = await import("@/stores/authStore");
     const initial = useAuthStore.getState();
     const register = vi.fn().mockResolvedValue(undefined);
     act(() => useAuthStore.setState({ register }));
     try {
-      render(
+      const { container } = render(
         <MemoryRouter>
           <RegisterPage />
         </MemoryRouter>,
       );
-      expect(await screen.findByTestId("auth-turnstile-failed")).toBeTruthy();
+      fireEvent.change(screen.getByLabelText("邮箱地址"), {
+        target: { value: "a@b.co" },
+      });
+      fireEvent.change(screen.getByLabelText("密码"), {
+        target: { value: "longenough1" },
+      });
+      fireEvent.change(screen.getByLabelText("确认密码"), {
+        target: { value: "longenough1" },
+      });
+      await userEvent.click(screen.getByRole("checkbox", { name: /同意/ }));
+      fireVerified(widgetEl(container), "form-payload");
+      fireEvent.click(screen.getByRole("button", { name: "创建账号" }));
+      await vi.waitFor(() => {
+        expect(register).toHaveBeenCalledWith(
+          "a@b.co",
+          "longenough1",
+          "form-payload",
+        );
+      });
+    } finally {
+      act(() => useAuthStore.setState(initial, true));
+    }
+  });
+
+  it("register form reports the load failure instead of asking to complete a missing widget", async () => {
+    const { RegisterPage } = await import("@/pages/RegisterPage");
+    const { useAuthStore } = await import("@/stores/authStore");
+    const initial = useAuthStore.getState();
+    const register = vi.fn().mockResolvedValue(undefined);
+    act(() => useAuthStore.setState({ register }));
+    try {
+      const { container } = render(
+        <MemoryRouter>
+          <RegisterPage />
+        </MemoryRouter>,
+      );
+      fireState(widgetEl(container), "error");
+      expect(await screen.findByTestId("auth-captcha-failed")).toBeTruthy();
       fireEvent.change(screen.getByLabelText("邮箱地址"), {
         target: { value: "a@b.co" },
       });

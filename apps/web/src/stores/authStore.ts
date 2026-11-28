@@ -21,15 +21,11 @@ interface AuthState {
 
   setUser: (user: User) => void;
   bootstrapSession: () => Promise<void>;
-  login: (
-    email: string,
-    password: string,
-    captchaToken?: string,
-  ) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   register: (
     email: string,
     password: string,
-    captchaToken?: string,
+    altchaProof?: string,
   ) => Promise<void>;
   logout: () => Promise<void>;
   forgetSession: () => void;
@@ -181,7 +177,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     }
   },
 
-  login: async (email, password, captchaToken) => {
+  login: async (email, password) => {
     set({ isLoading: true, error: null });
     try {
       const { data, error } = await (
@@ -189,7 +185,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       ).auth.signInWithPassword({
         email,
         password,
-        options: captchaToken ? { captchaToken } : undefined,
       });
       if (error || !data.session) {
         throw error ?? new Error("登录未获得有效会话");
@@ -202,14 +197,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       });
       await get().fetchUser();
     } catch (error) {
-      set({ error: "登录失败，请检查邮箱、密码或人机验证状态" });
+      set({ error: "登录失败，请检查邮箱和密码" });
       throw error;
     } finally {
       set({ isLoading: false });
     }
   },
 
-  register: async (email, password, captchaToken) => {
+  register: async (email, password, altchaProof) => {
     set({ isLoading: true, error: null });
     try {
       const { data, error } = await (
@@ -217,7 +212,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       ).auth.signUp({
         email,
         password,
-        options: captchaToken ? { captchaToken } : undefined,
+        // The ALTCHA proof rides in user_metadata; the Before User
+        // Created hook verifies it server-side before the account
+        // exists. Login carries no proof: it is gated by Supabase's
+        // own rate limits instead.
+        options: altchaProof ? { data: { altcha: altchaProof } } : undefined,
       });
       if (error) throw error;
       if (!data.session) {

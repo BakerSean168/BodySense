@@ -237,7 +237,6 @@ jobs:
           # Public browser-only identity configuration, baked into immutable assets.
           VITE_SUPABASE_URL: https://qdezojzgajsunjwthifv.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_EMxwsj1diGR6BeEXkFhOCQ_rRx4gGil
-          VITE_TURNSTILE_SITE_KEY: ${{ vars.BODYSENSE_TURNSTILE_SITE_KEY }}
           # Nightly candidate Web bundle carries the Person 记忆 category so the
           # staging channel can be reviewed against the staging API switch.
           VITE_EPISODIC_NOTES_CONTROLS_ENABLED: "true"
@@ -434,7 +433,6 @@ jobs:
             VITE_BODYSENSE_ANATOMY_CATALOG_URL=${{ needs.static-assets.outputs.atlas_catalog_url }}
             VITE_SUPABASE_URL=https://qdezojzgajsunjwthifv.supabase.co
             VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_EMxwsj1diGR6BeEXkFhOCQ_rRx4gGil
-            VITE_TURNSTILE_SITE_KEY=${{ vars.BODYSENSE_TURNSTILE_SITE_KEY }}
             ${{ matrix.extra_build_args }}
           cache-from: type=gha,scope=${{ matrix.cache_scope }}
           cache-to: type=gha,mode=max,scope=${{ matrix.cache_scope }}

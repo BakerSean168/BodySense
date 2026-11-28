@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import type { TurnstileInstance } from "@marsidev/react-turnstile";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/stores/authStore";
 import { InkButton, InkField } from "./InkField";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AuthCaptcha, turnstileSiteKey } from "./AuthCaptcha";
+import { AuthCaptcha, type AuthCaptchaHandle } from "./AuthCaptcha";
 
 type RegisterErrors = {
   email?: string;
@@ -16,7 +15,7 @@ type RegisterErrors = {
 
 export function RegisterForm() {
   const navigate = useNavigate();
-  const captchaRef = useRef<TurnstileInstance | null>(null);
+  const captchaRef = useRef<AuthCaptchaHandle | null>(null);
   const { register, isLoading, error, clearError } = useAuthStore();
 
   const [email, setEmail] = useState("");
@@ -72,17 +71,21 @@ export function RegisterForm() {
     clearError();
 
     if (!validateForm()) return;
-    if (turnstileSiteKey && captchaFailed) {
+    if (captchaFailed) {
       setValidationErrors((errors) => ({
         ...errors,
         captcha: "人机验证加载失败，请重新加载验证后再提交",
       }));
       return;
     }
-    const captchaToken = turnstileSiteKey
-      ? captchaRef.current?.getResponse()
-      : undefined;
-    if (turnstileSiteKey && !captchaToken) {
+    // The widget starts solving on load, so by submit time the proof is
+    // normally ready; give an in-flight solve a bounded chance to land
+    // before calling the submission incomplete.
+    let proof = captchaRef.current?.getProof() ?? null;
+    if (!proof) {
+      proof = (await captchaRef.current?.waitForProof(20_000)) ?? null;
+    }
+    if (!proof) {
       setValidationErrors((errors) => ({
         ...errors,
         captcha: "请完成人机验证",
@@ -91,7 +94,7 @@ export function RegisterForm() {
     }
 
     try {
-      await register(email, password, captchaToken || undefined);
+      await register(email, password, proof);
       navigate("/consultation");
     } catch {
       // Error is handled by the store

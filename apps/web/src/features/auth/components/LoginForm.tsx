@@ -1,13 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import type { TurnstileInstance } from "@marsidev/react-turnstile";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/stores/authStore";
 import { InkButton, InkField } from "./InkField";
-import { AuthCaptcha, turnstileSiteKey } from "./AuthCaptcha";
 
 export function LoginForm() {
   const navigate = useNavigate();
-  const captchaRef = useRef<TurnstileInstance | null>(null);
   const { login, isLoading, error, clearError } = useAuthStore();
 
   const [email, setEmail] = useState("");
@@ -16,7 +13,6 @@ export function LoginForm() {
     email?: string;
     password?: string;
   }>({});
-  const [captchaFailed, setCaptchaFailed] = useState(false);
 
   // The auth store error is global: reset it (and this form) whenever the
   // form mounts or unmounts so a login error never leaks onto /register.
@@ -50,31 +46,12 @@ export function LoginForm() {
     clearError();
 
     if (!validateForm()) return;
-    if (turnstileSiteKey && captchaFailed) {
-      setValidationErrors((errors) => ({
-        ...errors,
-        password: "人机验证加载失败，请重新加载验证后再提交",
-      }));
-      return;
-    }
-    const captchaToken = turnstileSiteKey
-      ? captchaRef.current?.getResponse()
-      : undefined;
-    if (turnstileSiteKey && !captchaToken) {
-      setValidationErrors((errors) => ({
-        ...errors,
-        password: "请完成人机验证",
-      }));
-      return;
-    }
 
     try {
-      await login(email, password, captchaToken || undefined);
+      await login(email, password);
       navigate("/consultation");
     } catch {
       // Error is handled by the store
-    } finally {
-      captchaRef.current?.reset();
     }
   };
 
@@ -104,11 +81,6 @@ export function LoginForm() {
         onChange={(e) => setPassword(e.target.value)}
         placeholder="密码"
         error={passwordError}
-      />
-
-      <AuthCaptcha
-        captchaRef={captchaRef}
-        onLoadFailureChange={setCaptchaFailed}
       />
 
       <div className="mt-[52px] lg:mt-[56px]">

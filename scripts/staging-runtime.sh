@@ -30,7 +30,6 @@ SUPABASE_URL=https://qdezojzgajsunjwthifv.supabase.co
 SUPABASE_SECRET_KEY=
 VITE_SUPABASE_URL=https://qdezojzgajsunjwthifv.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=
-VITE_TURNSTILE_SITE_KEY=
 LITELLM_MASTER_KEY=sk-$(openssl rand -hex 24)
 EMBEDDING_PROVIDER=hashing
 # Real provider credentials for non-stub staging inference.

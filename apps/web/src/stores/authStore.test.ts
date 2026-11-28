@@ -100,7 +100,7 @@ describe("Supabase Auth browser session adapter", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it("signs in using Supabase Auth and passes the Turnstile captchaToken", async () => {
+  it("signs in using Supabase Auth with no captcha token", async () => {
     client.signInWithPassword.mockResolvedValue({
       data: { session: mockSession() },
       error: null,
@@ -111,13 +111,10 @@ describe("Supabase Auth browser session adapter", () => {
         email: "test@example.com",
       }),
     );
-    await useAuthStore
-      .getState()
-      .login("test@example.com", "password123", "turnstile-token");
+    await useAuthStore.getState().login("test@example.com", "password123");
     expect(client.signInWithPassword).toHaveBeenCalledWith({
       email: "test@example.com",
       password: "password123",
-      options: { captchaToken: "turnstile-token" },
     });
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
@@ -128,12 +125,12 @@ describe("Supabase Auth browser session adapter", () => {
     await expect(
       useAuthStore
         .getState()
-        .register("test@example.com", "password123", "captcha-token"),
+        .register("test@example.com", "password123", "altcha-proof"),
     ).rejects.toThrow("Confirm email");
     expect(client.signUp).toHaveBeenCalledWith({
       email: "test@example.com",
       password: "password123",
-      options: { captchaToken: "captcha-token" },
+      options: { data: { altcha: "altcha-proof" } },
     });
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
     client.signUp.mockResolvedValue({
