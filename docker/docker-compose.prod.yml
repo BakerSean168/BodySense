@@ -211,6 +211,8 @@ services:
         condition: service_healthy
     environment:
       AI_SERVICE_INTERNAL_TOKEN: ${AI_SERVICE_INTERNAL_TOKEN:-}
+      ALTCHA_HMAC_KEY: ${ALTCHA_HMAC_KEY:-}
+      BEFORE_USER_CREATED_HOOK_SECRET: ${BEFORE_USER_CREATED_HOOK_SECRET:-}
       APP_ENV: production
       GIN_MODE: release
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-172.16.0.0/12}
